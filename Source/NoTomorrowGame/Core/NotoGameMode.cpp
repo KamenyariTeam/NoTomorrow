@@ -8,7 +8,7 @@
 #include "NotoHUD.h"
 #include "NotoPlayerController.h"
 
-ANotoGameMode::ANotoGameMode()
+ANotoGameMode::ANotoGameMode(const FObjectInitializer& Initializer) : Super(Initializer)
 {
 	DefaultPawnClass = ANotoCharacter::StaticClass();
 	PlayerControllerClass = ANotoPlayerController::StaticClass();

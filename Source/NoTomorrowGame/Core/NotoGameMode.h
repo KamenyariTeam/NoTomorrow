@@ -16,4 +16,7 @@ UCLASS()
 class NOTOMORROWGAME_API ANotoGameMode : public AModularGameModeBase
 {
 	GENERATED_BODY()
+
+public:
+	ANotoGameMode(const FObjectInitializer& Initializer);
 };
