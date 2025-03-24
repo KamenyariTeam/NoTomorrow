@@ -20,12 +20,13 @@
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/your-name/no-tomorrow.git
+   git clone https://github.com/KamenyariTeam/NoTomorrow.git
    ```
 
 2. **Open the `.uproject` file with Unreal Engine 5.5.4**
 
 3. If you need to build:
+   - Right-click on `NoTomorrow.uproject` and select `Generate Visual Studio project files`
    - Open `NoTomorrow.sln` in Visual Studio
    - Select `Development Editor` configuration, platform `Win64`
    - Click `Build`
@@ -76,16 +77,16 @@ We use consistent prefixes and conventions to help organize and search assets an
 
 ### 🟦 C++ Naming Convention
 
-| Element       | Convention                                                 | Example                      |
-|---------------|------------------------------------------------------------|------------------------------|
-| Class         | Unreal-style prefix (`A` or `U`) + `NT` + PascalCase       | `class ANTInventoryManager` / `class UNTInventorySubsystem`   |
-| Interface     | `INT` prefix + PascalCase                                  | `class INTInteractable`      |
-| Struct        | `F` prefix + PascalCase                                    | `struct FAnomalyData`        |
-| Enum          | `E` prefix + PascalCase                                    | `enum class EAnomalyType`    |
-| Variable      | CamelCase                                                  | `playerHealth`, `isVisible`  |
-| Function      | PascalCase                                                 | `BeginPlay()`, `Interact()`  |
-| UPROPERTY     | `UPROPERTY(...)` + clear name                              | `UPROPERTY(EditAnywhere) float DetectionRange;` |
-| UFUNCTION     | `UFUNCTION(...)` + PascalCase                              | `UFUNCTION(BlueprintCallable) void ResetState();` |
+| Element       | Convention                                             | Example                                                     |
+|---------------|--------------------------------------------------------|-------------------------------------------------------------|
+| Class         | Unreal-style prefix (`A` or `U`) + `Noto` + PascalCase | `class ANotoInventoryManager` / `class UNotoInventorySubsystem` |
+| Interface     | `I` prefix + `Noto` + PascalCase                       | `class INotoInteractable`                                   |
+| Struct        | `F` prefix + `Noto` + PascalCase                       | `struct FNotoAnomalyData`                                   |
+| Enum          | `E` prefix + `Noto` + PascalCase                       | `enum class ENotoAnomalyType`                               |
+| Variable      | CamelCase                                              | `playerHealth`, `isVisible`                                 |
+| Function      | PascalCase                                             | `BeginPlay()`, `Interact()`                                 |
+| UPROPERTY     | `UPROPERTY(...)` + clear name                          | `UPROPERTY(EditAnywhere) float DetectionRange;`             |
+| UFUNCTION     | `UFUNCTION(...)` + PascalCase                          | `UFUNCTION(BlueprintCallable) void ResetState();`           |
 
 **General Rules:**
 - Always use descriptive, context-aware names.
