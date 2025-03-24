@@ -1,0 +1,131 @@
+# ----------------------------------------
+# Unreal Engine 5
+# ----------------------------------------
+# Ignore Binaries, Build files, Intermediate files, etc.
+
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vscode/
+*.VC.db
+*.VC.opendb
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+
+# Ignore platform-specific files
+.vs/
+*.opensdf
+*.sdf
+*.cache
+*.log
+*.obj
+*.pdb
+*.ipch/
+*.aps
+*.ncb
+*.user
+*.userosscache
+*.suo
+*.VC.db
+*.VC.VC.opendb
+
+# Ignore compiled assets
+*.exe
+*.dll
+*.lib
+*.app
+*.dylib
+*.icns
+*.ipa
+*.pdb
+*.apk
+*.xap
+*.unityproj
+*.csproj
+*.pidb
+*.suo
+*.user
+*.userprefs
+*.db
+*.mdb
+*.opendb
+
+# Ignore config backups
+Config/DefaultEditor.ini
+Config/DefaultEditorPerProjectUserSettings.ini
+*.ini.bak
+
+# Ignore Crash Reports
+CrashReportClient/
+
+# Optional: if you use AutoSave
+Autosaves/
+
+# ----------------------------------------
+# ReSharper
+# ----------------------------------------
+.idea/
+*.DotSettings.user
+.ReSharper/
+_ReSharper*/
+*.ReSharper
+*.DotSettings
+
+# ----------------------------------------
+# Logs
+# ----------------------------------------
+*.log
+*.dmp
+
+# ----------------------------------------
+# Compiled shaders and cache
+# ----------------------------------------
+*.ush
+*.usf
+DerivedDataCache/
+Shaders/WorkingDirectory/
+
+# ----------------------------------------
+# Optional (if using Perforce or similar)
+# ----------------------------------------
+*.p4s
+
+# ----------------------------------------
+# Unreal Plugins (Optional if you build them locally)
+# ----------------------------------------
+Plugins/**/Binaries/
+Plugins/**/Intermediate/
+Plugins/**/Saved/
+
+# ----------------------------------------
+# Ignore Mac specific files
+# ----------------------------------------
+.DS_Store
+
+# ----------------------------------------
+# Ignore backup and temp files
+# ----------------------------------------
+*.tmp
+*.bak
+*.orig
+*.swp
+
+# ----------------------------------------
+# Ignore compiled Python files
+# ----------------------------------------
+*.pyc
+__pycache__/
+
+# ----------------------------------------
+# Git specific
+# ----------------------------------------
+.git/
+
+# ----------------------------------------
+# Custom
+# ----------------------------------------
+# Add your own rules here if needed
