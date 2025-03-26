@@ -11,8 +11,20 @@ public class NoTomorrowGame : ModuleRules
 		PublicIncludePaths.AddRange(["NoTomorrowGame"]);
 
 		PublicDependencyModuleNames.AddRange([
-			"Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "ModularGameplay", "ModularGameplayActors",
-			"UMG", "DeveloperSettings"
+			"Core",
+			"CoreUObject",
+			"DeveloperSettings",
+			"Engine",
+			"InputCore",
+			"EnhancedInput",
+			"ModularGameplay",
+			"ModularGameplayActors",
+			"UMG",
+			"GameFeatures",
+			"GameplayTags",
+			"GameplayExperience",
+			"Slate",
+			"SlateCore"
 		]);
 
 		PrivateDependencyModuleNames.AddRange([]);
