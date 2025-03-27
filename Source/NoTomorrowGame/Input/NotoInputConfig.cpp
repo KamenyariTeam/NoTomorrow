@@ -1,6 +1,8 @@
 ﻿// © 2025 Kamenyari. All rights reserved.
 
 #include "NotoInputConfig.h"
+
+#include "Development/NotoLogChannels.h"
 #include "Logging/LogMacros.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogNotoInput, Log, All);
@@ -10,9 +12,9 @@ UNotoInputConfig::UNotoInputConfig(const FObjectInitializer& ObjectInitializer)
 {
 }
 
-const UInputAction* UNotoInputConfig::FindInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound) const
+const UInputAction* UNotoInputConfig::FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound) const
 {
-	for (const FNotoInputAction& Action : InputActions)
+	for (const FNotoInputAction& Action : NativeInputActions)
 	{
 		if (Action.InputAction && (Action.InputTag == InputTag))
 		{
@@ -22,7 +24,7 @@ const UInputAction* UNotoInputConfig::FindInputActionForTag(const FGameplayTag& 
 
 	if (bLogNotFound)
 	{
-		UE_LOG(LogNotoInput, Error, TEXT("Can't find InputAction for InputTag [%s] on InputConfig [%s]."), *InputTag.ToString(), *GetNameSafe(this));
+		UE_LOG(LogNoto, Error, TEXT("Can't find NativeInputAction for InputTag [%s] on InputConfig [%s]."), *InputTag.ToString(), *GetNameSafe(this));
 	}
 
 	return nullptr;

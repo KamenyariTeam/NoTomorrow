@@ -3,13 +3,14 @@
 #pragma once
 
 #include "ModularCharacter.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 #include "NotoCharacter.generated.h"
 
 class AController;
 class ANotoPlayerController;
 class ANotoPlayerState;
 class UInputComponent;
-class UNotoCameraComponent;
 
 /**
  * ANotoCharacter
@@ -35,12 +36,12 @@ public:
 	virtual void Reset() override;
 
 protected:
-
 	// Disables movement and collision (used during death).
 	void DisableMovementAndCollision();
 
-private:
-	// Camera component for view handling.
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UNotoCameraComponent> CameraComponent;
+	TObjectPtr<USpringArmComponent> SpringArm;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> CameraComponent;
 };

@@ -24,7 +24,7 @@ static FAutoConsoleCommand CVarDumpLoadedAssets(
 
 UNotoAssetManager::UNotoAssetManager()
 {
-	DefaultPawnData = nullptr;
+	
 }
 
 UNotoAssetManager& UNotoAssetManager::Get()
@@ -53,9 +53,9 @@ UObject* UNotoAssetManager::SynchronousLoadAsset(const FSoftObjectPath& AssetPat
 			LogTimePtr = MakeUnique<FScopeLogTime>(*FString::Printf(TEXT("Synchronously loaded asset [%s]"), *AssetPath.ToString()), nullptr, FScopeLogTime::ScopeLog_Seconds);
 		}
 
-		if (UAssetManager::IsInitialized())
+		if (IsInitialized())
 		{
-			return UAssetManager::GetStreamableManager().LoadSynchronous(AssetPath, false);
+			return GetStreamableManager().LoadSynchronous(AssetPath, false);
 		}
 
 		// Use LoadObject if asset manager isn't ready yet.
@@ -102,11 +102,6 @@ void UNotoAssetManager::StartInitialLoading()
 
 	// Run all the queued up startup jobs
 	// DoAllStartupJobs();
-}
-
-const UNotoPawnData* UNotoAssetManager::GetDefaultPawnData() const
-{
-	return GetAsset(DefaultPawnData);
 }
 
 UPrimaryDataAsset* UNotoAssetManager::LoadGameDataOfClass(TSubclassOf<UPrimaryDataAsset> DataClass, const TSoftObjectPtr<UPrimaryDataAsset>& DataClassPath, FPrimaryAssetType PrimaryAssetType)

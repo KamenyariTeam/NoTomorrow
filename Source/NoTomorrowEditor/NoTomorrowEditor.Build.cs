@@ -27,8 +27,6 @@ public class NoTomorrowEditor : ModuleRules
                 "PhysicsCore",
                 "GameplayTagsEditor",
                 "GameplayTasksEditor",
-                "GameplayAbilities",
-                "GameplayAbilitiesEditor",
                 "StudioTelemetry",
                 "NoTomorrowGame",
             }

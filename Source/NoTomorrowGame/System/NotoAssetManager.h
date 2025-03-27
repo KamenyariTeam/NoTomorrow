@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Character/NotoPawnData.h"
 #include "Engine/AssetManager.h"
 #include "NotoAssetManager.generated.h"
 
@@ -37,8 +36,6 @@ public:
 	// Logs all assets currently loaded and tracked by the asset manager.
 	static void DumpLoadedAssets();
 
-	const UNotoPawnData* GetDefaultPawnData() const;
-
 protected:
 	template <typename GameDataClass>
 	const GameDataClass& GetOrLoadTypedGameData(const TSoftObjectPtr<GameDataClass>& DataPath)
@@ -71,10 +68,6 @@ protected:
 	// Loaded version of the game data
 	UPROPERTY(Transient)
 	TMap<TObjectPtr<UClass>, TObjectPtr<UPrimaryDataAsset>> GameDataMap;
-
-	// Pawn data used when spawning player pawns if there isn't one set on the player state.
-	UPROPERTY(Config)
-	TSoftObjectPtr<UNotoPawnData> DefaultPawnData;
 
 private:
 	// Called periodically during loads, could be used to feed the status to a loading screen

@@ -4,6 +4,7 @@
 
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
+#include "GameFeatures/GameFeatureAction_AddInputContextMapping.h"
 #include "NotoInputConfig.generated.h"
 
 class UInputAction;
@@ -29,27 +30,20 @@ public:
 /**
  * UNotoInputConfig
  *
- * Non-mutable data asset that contains input configuration properties.
+ *	Non-mutable data asset that contains input configuration properties.
  */
 UCLASS(BlueprintType, Const)
-class NOTOMORROWGAME_API UNotoInputConfig : public UDataAsset
+class UNotoInputConfig : public UDataAsset
 {
 	GENERATED_BODY()
 
 public:
 	UNotoInputConfig(const FObjectInitializer& ObjectInitializer);
 
-	/**
-	 * Finds an input action assigned to a gameplay tag.
-	 * @param InputTag - The tag to search for.
-	 * @param bLogNotFound - Whether to log an error if not found.
-	 * @return The matching UInputAction if found, otherwise nullptr.
-	 */
-	UFUNCTION(BlueprintCallable, Category = "Input")
-	const UInputAction* FindInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
+	UFUNCTION(BlueprintCallable, Category = "Noto|Pawn")
+	const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
-public:
-	// List of input actions used by the owner. These input actions are mapped to gameplay tags.
+	// List of input actions used by the owner. These input actions are mapped to a gameplay tag and must be manually bound.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputAction"))
-	TArray<FNotoInputAction> InputActions;
+	TArray<FNotoInputAction> NativeInputActions;
 };

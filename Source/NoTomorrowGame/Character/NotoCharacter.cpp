@@ -7,8 +7,9 @@
 
 #include "Engine/World.h"
 #include "TimerManager.h"
-#include "Camera/NotoCameraComponent.h"
-#include "Core/NotoPlayerController.h"
+#include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Player/NotoPlayerController.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -30,15 +31,27 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 		MeshComp->SetCollisionProfileName(TEXT("PawnMesh"));
 	}
 
-	// Create camera component.
-	CameraComponent = CreateDefaultSubobject<UNotoCameraComponent>(TEXT("CameraComponent"));
-	// Adjust relative location as needed.
-	CameraComponent->SetRelativeLocation(FVector(-300.0f, 0.0f, 75.0f));
+	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("TopDownSpringArm"));
+	SpringArm->SetupAttachment(RootComponent);
+	SpringArm->TargetArmLength = 1000.0f;
+	SpringArm->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f)); // Look downward
+	SpringArm->bDoCollisionTest = false; // Disable camera collision
+
+	// Disable inheriting rotation from the pawn
+	SpringArm->bInheritPitch = false;
+	SpringArm->bInheritYaw = false;
+	SpringArm->bInheritRoll = false;
+
+	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
+	CameraComponent->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
 	
-	// Configure controller rotation usage.
 	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = true;
+	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
+	
+	BaseEyeHeight = 80.0f;
+	CrouchedEyeHeight = 50.0f;
 }
 
 ANotoPlayerController* ANotoCharacter::GetNotoPlayerController() const

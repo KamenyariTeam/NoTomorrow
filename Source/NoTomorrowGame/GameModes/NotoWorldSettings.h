@@ -6,8 +6,6 @@
 #include "GameFramework/WorldSettings.h"
 #include "NotoWorldSettings.generated.h"
 
-class UNotoGameplayExperience;
-
 /**
  * ANotoWorldSettings
  *
@@ -31,7 +29,7 @@ public:
 
 protected:
 	// The experience asset used when starting this map.
-	UPROPERTY(EditDefaultsOnly, Category = "Gameplay", meta = (AllowedClass = "NotoGameplayExperience"))
+	UPROPERTY(EditDefaultsOnly, Category = "Gameplay", meta = (AllowedClass = "GameplayExperience"))
 	FPrimaryAssetId GameplayExperience;
 
 public:

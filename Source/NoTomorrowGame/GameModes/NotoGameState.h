@@ -25,7 +25,7 @@ public:
 	//~End of AActor interface
 
 	//~Begin IGameplayExperienceProvider interface
-	virtual FPrimaryAssetId GetGameExperience() const override { return DefaultGameExperience;}
+	virtual FPrimaryAssetId GetGameExperience() const override { return DefaultGameExperience; }
 	//~End of IGameplayExperienceProvider interface
 
 protected:
@@ -33,6 +33,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UGameExperienceManagerComponent> ExperienceManagerComponent;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay", meta = (Validate, AllowedClass = "NotoGameplayExperience"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay", meta = (Validate, AllowedClass = "GameplayExperience"))
 	FPrimaryAssetId DefaultGameExperience;
 };
