@@ -98,7 +98,6 @@ void UNotoHeroComponent::InitializePlayerInput()
 		NotoIC->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this, &ThisClass::Input_Move, /*bLogIfNotFound=*/ false);
 		// Unfortunately, Mouse 2D input is not working correctly while cursor is showing.
 		// NotoIC->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Look_Mouse, ETriggerEvent::Triggered, this, &ThisClass::Input_LookMouse, /*bLogIfNotFound=*/ false);
-		NotoIC->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Look_Stick, ETriggerEvent::Triggered, this, &ThisClass::Input_LookStick, /*bLogIfNotFound=*/ false);
 	}
 
 	if (ensure(!bReadyToBindInputs))
@@ -162,55 +161,35 @@ void UNotoHeroComponent::Input_LookMouse(/*const FInputActionValue& InputActionV
 	FVector MouseWorldPosition;
 	FVector MouseWorldDirection;
 
-	// Get the mouse position in the world space
+	// De-project the cursor to a world-space ray.
 	if (PC->DeprojectMousePositionToWorld(MouseWorldPosition, MouseWorldDirection))
 	{
-		// Get the pawn's current location
-		FVector PawnLocation = Pawn->GetActorLocation();
+		// Intersect the ray with the horizontal plane at the pawn’s Z height.
+		const float PawnZ = Pawn->GetActorLocation().Z;
 
-		// Calculate the direction from the pawn to the mouse position
-		FVector DirectionToMouse = MouseWorldPosition - PawnLocation;
-		DirectionToMouse.Z = 0.0f; // Keep it 2D (top-down), ignore Z axis
+		// Guard against rays parallel to the plane.
+		if (!FMath::IsNearlyZero(MouseWorldDirection.Z))
+		{
+			const float Distance = (PawnZ - MouseWorldPosition.Z) / MouseWorldDirection.Z;
 
-		// Normalize the direction to get the direction vector
-		DirectionToMouse.Normalize();
+			// Only use intersections that lie in front of the camera.
+			if (Distance > 0.0f)
+			{
+				const FVector HitPosition = MouseWorldPosition + MouseWorldDirection * Distance;
 
-		// Get the rotation to face the mouse direction
-		FRotator NewRotation = DirectionToMouse.Rotation();
+				// Calculate the 2D direction from pawn to intersection point.
+				FVector DirectionToMouse = HitPosition - Pawn->GetActorLocation();
+				DirectionToMouse.Z = 0.0f;
+				DirectionToMouse.Normalize();
 
-		// Apply the new yaw rotation to the pawn
-		Pawn->SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f)); // Set only Yaw for top-down
+				if (!DirectionToMouse.IsNearlyZero())
+				{
+					const FRotator NewRotation = DirectionToMouse.Rotation();
+
+					// Apply only the yaw so the pawn faces the cursor.
+					Pawn->SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));
+				}
+			}
+		}
 	}
-}
-
-void UNotoHeroComponent::Input_LookStick(const FInputActionValue& InputActionValue)
-{
-	APawn* Pawn = Cast<APawn>(GetOwner());
-	if (!Pawn || !GetWorld())
-	{
-		return;
-	}
-
-	const FVector2D StickInput = InputActionValue.Get<FVector2D>();
-    
-	//const FVector2D ClampedInput = StickInput.GetClampedToMaxSize(1.0f);
-	// const FVector WorldSpaceDirection = FVector(ClampedInput.X, ClampedInput.Y, 0.f);
-	const FVector WorldSpaceDirection = FVector(StickInput.X, StickInput.Y, 0.f);
-
-	// Convert to rotation (Hotline Miami-style direct facing)
-	const FRotator TargetRotation = WorldSpaceDirection.Rotation();
-    
-	// Immediate rotation (no smoothing)
-	Pawn->SetActorRotation(TargetRotation);
-
-	/* For smoothed rotation (optional):
-	const float DeltaTime = GetWorld()->GetDeltaSeconds();
-	const FRotator NewRotation = FMath::RInterpTo(
-		Pawn->GetActorRotation(),
-		TargetRotation,
-		DeltaTime,
-		NotoHero::LookTurnRate // Define this as your rotation speed (e.g., 15.0f)
-	);
-	Pawn->SetActorRotation(NewRotation);
-	*/
 }

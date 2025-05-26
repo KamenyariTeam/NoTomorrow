@@ -4,11 +4,7 @@
 #include "GameFramework/Controller.h"
 #include "Components/CapsuleComponent.h"
 #include "NotoCharacterMovementComponent.h"
-
-#include "Engine/World.h"
-#include "TimerManager.h"
-#include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
+#include "GameFramework/GameplayCameraComponent.h"
 #include "Player/NotoPlayerController.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
@@ -24,27 +20,15 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	CapsuleComp->SetCollisionProfileName(TEXT("Pawn"));
 
 	// Set up mesh rotation if needed (adjust as appropriate).
-	USkeletalMeshComponent* MeshComp = GetMesh();
-	if (MeshComp)
+	if (USkeletalMeshComponent* MeshComp = GetMesh())
 	{
 		MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
 		MeshComp->SetCollisionProfileName(TEXT("PawnMesh"));
 	}
-
-	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("TopDownSpringArm"));
-	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 1000.0f;
-	SpringArm->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f)); // Look downward
-	SpringArm->bDoCollisionTest = false; // Disable camera collision
-
-	// Disable inheriting rotation from the pawn
-	SpringArm->bInheritPitch = false;
-	SpringArm->bInheritYaw = false;
-	SpringArm->bInheritRoll = false;
-
-	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("TopDownCamera"));
-	CameraComponent->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
-	CameraComponent = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComponent"));
+	
+	GameplayCameraComponent = CreateDefaultSubobject<UGameplayCameraComponent>(TEXT("CameraComponent"));
+	GameplayCameraComponent->SetupAttachment(RootComponent);
+	GameplayCameraComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 	
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;

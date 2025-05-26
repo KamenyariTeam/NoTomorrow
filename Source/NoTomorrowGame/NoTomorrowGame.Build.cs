@@ -27,6 +27,6 @@ public class NoTomorrowGame : ModuleRules
 			"SlateCore"
 		]);
 
-		PrivateDependencyModuleNames.AddRange([]);
+		PrivateDependencyModuleNames.AddRange(["GameplayCameras"]);
 	}
 }

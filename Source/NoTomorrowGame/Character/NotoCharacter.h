@@ -3,14 +3,13 @@
 #pragma once
 
 #include "ModularCharacter.h"
-#include "Camera/CameraComponent.h"
-#include "GameFramework/SpringArmComponent.h"
 #include "NotoCharacter.generated.h"
 
 class AController;
 class ANotoPlayerController;
 class ANotoPlayerState;
 class UInputComponent;
+class UGameplayCameraComponent;
 
 /**
  * ANotoCharacter
@@ -40,8 +39,5 @@ protected:
 	void DisableMovementAndCollision();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<USpringArmComponent> SpringArm;
-	
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UCameraComponent> CameraComponent;
+	TObjectPtr<UGameplayCameraComponent> GameplayCameraComponent;
 };
