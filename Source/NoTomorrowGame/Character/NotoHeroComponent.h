@@ -39,7 +39,6 @@ protected:
 	// Input binding callbacks
 	void Input_Move(const FInputActionValue& InputActionValue);
 	void Input_LookMouse(/*const FInputActionValue& InputActionValue*/);
-	void Input_LookStick(const FInputActionValue& InputActionValue);
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UNotoInputConfig> DefaultInputConfig;
