@@ -24,8 +24,11 @@ public class NoTomorrowGame : ModuleRules
 			"GameplayTags",
 			"GameplayExperience",
 			"Slate",
-			"SlateCore"
-		]);
+			"SlateCore",
+            "GameplayAbilities",
+			"GameplayTags",
+			"GameplayTasks"
+        ]);
 
 		PrivateDependencyModuleNames.AddRange(["GameplayCameras"]);
 	}

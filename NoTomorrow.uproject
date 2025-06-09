@@ -10,7 +10,9 @@
 			"LoadingPhase": "Default",
 			"AdditionalDependencies": [
 				"DeveloperSettings",
-				"Engine"
+				"Engine",
+				"ModularGameplayActors",
+				"GameplayAbilities"
 			]
 		},
 		{
@@ -73,6 +75,10 @@
 		},
 		{
 			"Name": "ModularGameplayActors",
+			"Enabled": true
+		},
+		{
+			"Name": "GameplayAbilities",
 			"Enabled": true
 		}
 	],
