@@ -1,39 +1,45 @@
-﻿// © 2025 Kamenyari. All rights reserved.
+// © 2025 Kamenyari. All rights reserved.
 
 #include "NotoCharacter.h"
+
+#include "AbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/GameplayCameraComponent.h"
 #include "NotoPlayerPawnComponent.h"
+#include "Player/NotoPlayerState.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
 {
-	// Disable ticking if not needed.
 	PrimaryActorTick.bCanEverTick = false;
 
-	// Set up capsule component collision settings.
-	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
-	check(CapsuleComp);
-	CapsuleComp->InitCapsuleSize(40.0f, 90.0f);
-	CapsuleComp->SetCollisionProfileName(TEXT("Pawn"));
+	UCapsuleComponent* Capsule = GetCapsuleComponent();
+	check(Capsule);
+	Capsule->InitCapsuleSize(40.0f, 90.0f);
+	Capsule->SetCollisionProfileName(TEXT("Pawn"));
 
-	// Set up mesh rotation if needed (adjust as appropriate).
-	if (USkeletalMeshComponent* MeshComp = GetMesh())
+	if (USkeletalMeshComponent* MeshComponent = GetMesh())
 	{
-		MeshComp->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
-		MeshComp->SetCollisionProfileName(TEXT("PawnMesh"));
+		MeshComponent->SetRelativeRotation(FRotator(0.0f, -90.0f, 0.0f));
+		MeshComponent->SetCollisionProfileName(TEXT("PawnMesh"));
 	}
-	
+
 	GameplayCameraComponent = CreateDefaultSubobject<UGameplayCameraComponent>(TEXT("CameraComponent"));
 	GameplayCameraComponent->SetupAttachment(RootComponent);
 	GameplayCameraComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
-	
+
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
-	
+
 	BaseEyeHeight = 80.0f;
 	CrouchedEyeHeight = 50.0f;
+}
+
+UAbilitySystemComponent* ANotoCharacter::GetAbilitySystemComponent() const
+{
+	const ANotoPlayerState* NotoPlayerState = GetPlayerState<ANotoPlayerState>();
+	return NotoPlayerState ? NotoPlayerState->GetAbilitySystemComponent() : nullptr;
 }
 
 void ANotoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -43,5 +49,51 @@ void ANotoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	if (UNotoPlayerPawnComponent* PlayerPawnComponent = FindComponentByClass<UNotoPlayerPawnComponent>())
 	{
 		PlayerPawnComponent->InitializePlayerInput(PlayerInputComponent);
+	}
+}
+
+void ANotoCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	InitializeAbilitySystem();
+}
+
+void ANotoCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	InitializeAbilitySystem();
+}
+
+void ANotoCharacter::UnPossessed()
+{
+	UninitializeAbilitySystem();
+	Super::UnPossessed();
+}
+
+void ANotoCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	UninitializeAbilitySystem();
+	Super::EndPlay(EndPlayReason);
+}
+
+void ANotoCharacter::InitializeAbilitySystem()
+{
+	ANotoPlayerState* NotoPlayerState = GetPlayerState<ANotoPlayerState>();
+	if (!NotoPlayerState)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystemComponent = NotoPlayerState->GetAbilitySystemComponent();
+	check(AbilitySystemComponent);
+	AbilitySystemComponent->InitAbilityActorInfo(NotoPlayerState, this);
+}
+
+void ANotoCharacter::UninitializeAbilitySystem()
+{
+	if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
+		AbilitySystemComponent && AbilitySystemComponent->GetAvatarActor() == this)
+	{
+		AbilitySystemComponent->ClearActorInfo();
 	}
 }

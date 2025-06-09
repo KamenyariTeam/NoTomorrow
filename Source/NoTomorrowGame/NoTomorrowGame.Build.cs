@@ -18,7 +18,9 @@ public class NoTomorrowGame : ModuleRules
 			"EnhancedInput",
 			"ModularGameplay",
 			"ModularGameplayActors",
-			"GameplayTags"
+			"GameplayAbilities",
+			"GameplayTags",
+			"GameplayTasks"
 		]);
 
 		PrivateDependencyModuleNames.AddRange(["GameplayCameras"]);
