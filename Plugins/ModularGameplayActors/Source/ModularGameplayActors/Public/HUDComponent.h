@@ -14,25 +14,25 @@ class MODULARGAMEPLAYACTORS_API UHUDComponent: public UGameFrameworkComponent
 	GENERATED_BODY()
 public:
 
-	template <typename T = AHUD, TEMPLATE_REQUIRES(TPointerIsConvertibleFromTo<T, AHUD>::Value)>
+	template <typename T = AHUD UE_REQUIRES(TPointerIsConvertibleFromTo<T, AHUD>::Value)>
 	T* GetHUD() const
 	{
 		return Cast<T>(GetOwner(), ECastCheckedType::NullAllowed);
 	}
 
-	template <typename T = AHUD, TEMPLATE_REQUIRES(TPointerIsConvertibleFromTo<T, AHUD>::Value)>
+	template <typename T = AHUD UE_REQUIRES(TPointerIsConvertibleFromTo<T, AHUD>::Value)>
 	T* GetHUDChecked() const
 	{
 		return CastChecked<T>(GetOwner(), ECastCheckedType::NullAllowed);
 	}
 
-	template <typename T = APlayerController, TEMPLATE_REQUIRES(TPointerIsConvertibleFromTo<T, APlayerController>::Value)>
+	template <typename T = APlayerController UE_REQUIRES(TPointerIsConvertibleFromTo<T, APlayerController>::Value)>
 	T* GetOwningPlayer() const
 	{
 		return GetHUDChecked<AHUD>()->GetOwningPlayerController();
 	}
 
-	template <typename T = APawn, TEMPLATE_REQUIRES(TPointerIsConvertibleFromTo<T, APawn>::Value)>
+	template <typename T = APawn UE_REQUIRES(TPointerIsConvertibleFromTo<T, APawn>::Value)>
 	T* GetOwningPlayerPawn() const
 	{
 		return GetHUDChecked<AHUD>()->GetOwningPawn();
