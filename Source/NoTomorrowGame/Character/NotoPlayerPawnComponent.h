@@ -38,6 +38,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Input")
 	TObjectPtr<UNotoInputConfig> DefaultInputConfig;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Noto|Input|Mouse")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Input|Mouse")
 	bool bAimWithMouseCursor = true;
 };

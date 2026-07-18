@@ -54,8 +54,7 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 		NotoGameplayTags::InputTag_Move,
 		ETriggerEvent::Triggered,
 		this,
-		&ThisClass::Input_Move,
-		/*bLogIfNotFound=*/ true);
+		&ThisClass::Input_Move);
 
 	RefreshTickEnabled();
 }

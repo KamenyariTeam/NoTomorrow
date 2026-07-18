@@ -2,7 +2,6 @@
 
 #include "NotoInputConfig.h"
 
-#include "Development/NotoLogChannels.h"
 #include "Logging/LogMacros.h"
 
 #if WITH_EDITOR
@@ -11,7 +10,7 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogNotoInput, Log, All);
 
-const UInputAction* UNotoInputConfig::FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound) const
+const UInputAction* UNotoInputConfig::FindNativeInputActionForTag(const FGameplayTag& InputTag) const
 {
 	for (const FNotoTaggedInputAction& Action : NativeInputActions)
 	{
@@ -21,10 +20,7 @@ const UInputAction* UNotoInputConfig::FindNativeInputActionForTag(const FGamepla
 		}
 	}
 
-	if (bLogNotFound)
-	{
-		UE_LOG(LogNoto, Error, TEXT("Can't find NativeInputAction for InputTag [%s] on InputConfig [%s]."), *InputTag.ToString(), *GetNameSafe(this));
-	}
+	UE_LOG(LogNotoInput, Error, TEXT("Can't find NativeInputAction for InputTag [%s] on InputConfig [%s]."), *InputTag.ToString(), *GetNameSafe(this));
 
 	return nullptr;
 }

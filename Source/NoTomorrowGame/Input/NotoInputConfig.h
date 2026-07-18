@@ -37,8 +37,8 @@ class UNotoInputConfig : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Noto|Input")
-	const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
+	UFUNCTION(BlueprintPure, Category = "Noto|Input")
+	const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag) const;
 
 #if WITH_EDITOR
 	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;

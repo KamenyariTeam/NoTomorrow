@@ -20,21 +20,24 @@ class UNotoInputComponent : public UEnhancedInputComponent
 
 public:
 	template<class UserClass, typename FuncType>
-	bool BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound);
+	bool BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func);
 };
 
 
 template<class UserClass, typename FuncType>
-bool UNotoInputComponent::BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound)
+bool UNotoInputComponent::BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
 {
-	if (InputConfig)
+	if (!InputConfig)
 	{
-		if (const UInputAction* InputAction = InputConfig->FindNativeInputActionForTag(InputTag, bLogIfNotFound))
-		{
-			BindAction(InputAction, TriggerEvent, Object, Func);
-			return true;
-		}
+		return false;
 	}
 
-	return false;
+	const UInputAction* InputAction = InputConfig->FindNativeInputActionForTag(InputTag);
+	if (!InputAction)
+	{
+		return false;
+	}
+
+	BindAction(InputAction, TriggerEvent, Object, Func);
+	return true;
 }
