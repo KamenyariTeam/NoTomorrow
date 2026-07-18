@@ -6,10 +6,10 @@ The project currently concentrates on a small, durable gameplay foundation. Heis
 
 ## Current technical foundation
 
-- `NoTomorrowGame`: the single project runtime module, containing the modular game framework classes, semantic Enhanced Input bindings, cursor aiming, gameplay tags, and Gameplay Cameras integration.
+- `NoTomorrowGame`: the single project runtime module, containing the modular game framework classes, a PlayerState-owned Gameplay Ability System, semantic Enhanced Input bindings, cursor aiming, gameplay tags, and Gameplay Cameras integration.
 - `Plugins/ModularGameplayActors`: reusable modular actor, pawn, character, controller, GameMode, and GameState bases aligned with Epic's Modular Gameplay actors.
 - Native Unreal configuration installs the default input mapping context and software cursor; concrete pawn, game-mode, input, camera, cursor, and map data lives in project assets.
-- Common UI, Game Features, Modular Gameplay, Enhanced Input, Gameplay Tags, and Gameplay Cameras remain enabled engine integrations. Game Features are available for features that eventually need independent activation, not ordinary project composition.
+- Common UI, Game Features, Modular Gameplay, Gameplay Abilities, Enhanced Input, Gameplay Tags, and Gameplay Cameras remain enabled engine integrations. Game Features are available for features that eventually need independent activation, not ordinary project composition.
 
 C++ owns engine-facing foundations and lifecycle behavior. Blueprints and data assets configure concrete game classes and authored data.
 

@@ -13,9 +13,10 @@ This document records the current foundation and its intended boundaries.
 
 ### Runtime composition
 
-- `ANotoGameMode` selects `ANotoCharacter`, `ANotoPlayerController`, and `AModularGameStateBase`. Concrete Blueprint defaults may specialize the pawn and other presentation data.
+- `ANotoGameMode` selects `ANotoCharacter`, `ANotoPlayerController`, `ANotoPlayerState`, and `AModularGameStateBase`. Concrete Blueprint defaults may specialize the pawn and other presentation data.
 - `ANotoCharacter::SetupPlayerInputComponent` hands input setup to `UNotoPlayerPawnComponent`.
 - `UNotoPlayerPawnComponent` owns local movement bindings and cursor aiming. `UNotoInputConfig` maps semantic gameplay tags to authored input actions; the default mapping context is installed by Enhanced Input developer settings.
+- `ANotoPlayerState` owns the player's single replicated Ability System Component. `ANotoCharacter` implements `IAbilitySystemInterface` as the current avatar and initializes actor info on server possession and client PlayerState replication.
 - Software cursors are configured through `UUserInterfaceSettings` rather than custom activation actions.
 - Stock Unreal Engine, AssetManager, GameInstance, WorldSettings, and HUD behavior is used until game-specific behavior creates a real subclass requirement.
 
@@ -45,4 +46,4 @@ This document records the current foundation and its intended boundaries.
 
 ## Future architecture rule
 
-Use the smallest native Unreal facility that meets the current requirement. Add a subsystem, module, plugin, Game Feature, or other architectural layer only when a concrete caller needs its lifecycle or boundary. The planned GAS work is deliberately separate and must establish one explicit Ability System Component ownership model before abilities are built on top of it.
+Use the smallest native Unreal facility that meets the current requirement. Add a subsystem, module, plugin, Game Feature, or other architectural layer only when a concrete caller needs its lifecycle or boundary. Add custom Ability System Component behavior, attribute sets, and abilities only when a gameplay feature needs them; the PlayerState remains their persistent owner.
