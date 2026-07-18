@@ -6,9 +6,7 @@
 #include "NotoInputConfig.h"
 #include "NotoInputComponent.generated.h"
 
-class UEnhancedInputLocalPlayerSubsystem;
 class UInputAction;
-class UObject;
 
 /**
  * UNotoInputComponent
@@ -21,13 +19,8 @@ class UNotoInputComponent : public UEnhancedInputComponent
 	GENERATED_BODY()
 
 public:
-
-	UNotoInputComponent(const FObjectInitializer& ObjectInitializer);
-	
 	template<class UserClass, typename FuncType>
 	bool BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound);
-
-	void RemoveBinds(TArray<uint32>& BindHandles);
 };
 
 

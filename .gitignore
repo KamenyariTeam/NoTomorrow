@@ -56,7 +56,6 @@ Saved/
 *.opendb
 
 # Ignore config backups
-Config/DefaultEditor.ini
 Config/DefaultEditorPerProjectUserSettings.ini
 *.ini.bak
 
@@ -85,8 +84,6 @@ _ReSharper*/
 # ----------------------------------------
 # Compiled shaders and cache
 # ----------------------------------------
-*.ush
-*.usf
 DerivedDataCache/
 Shaders/WorkingDirectory/
 

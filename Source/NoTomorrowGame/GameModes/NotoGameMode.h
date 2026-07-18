@@ -16,11 +16,4 @@ class NOTOMORROWGAME_API ANotoGameMode : public AModularGameModeBase
 
 public:
 	ANotoGameMode(const FObjectInitializer& Initializer);
-	
-	//~AGameModeBase interface
-	virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
-	//~End of AGameModeBase interface
-
-protected:
-	bool IsExperienceLoaded() const;
 };

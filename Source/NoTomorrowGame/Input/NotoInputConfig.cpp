@@ -11,14 +11,9 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogNotoInput, Log, All);
 
-UNotoInputConfig::UNotoInputConfig(const FObjectInitializer& ObjectInitializer)
-	: Super(ObjectInitializer)
-{
-}
-
 const UInputAction* UNotoInputConfig::FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound) const
 {
-	for (const FNotoInputAction& Action : NativeInputActions)
+	for (const FNotoTaggedInputAction& Action : NativeInputActions)
 	{
 		if (Action.InputAction && (Action.InputTag == InputTag))
 		{
@@ -42,7 +37,7 @@ EDataValidationResult UNotoInputConfig::IsDataValid(FDataValidationContext& Cont
 
 	for (int32 Index = 0; Index < NativeInputActions.Num(); ++Index)
 	{
-		const FNotoInputAction& Entry = NativeInputActions[Index];
+		const FNotoTaggedInputAction& Entry = NativeInputActions[Index];
 		if (!Entry.InputAction)
 		{
 			Result = EDataValidationResult::Invalid;

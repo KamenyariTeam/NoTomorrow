@@ -9,12 +9,12 @@
 class UInputAction;
 
 /**
- * FNotoInputAction
+ * FNotoTaggedInputAction
  *
  * Struct used to map an input action to a gameplay tag.
  */
 USTRUCT(BlueprintType)
-struct FNotoInputAction
+struct FNotoTaggedInputAction
 {
 	GENERATED_BODY()
 
@@ -37,9 +37,7 @@ class UNotoInputConfig : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	UNotoInputConfig(const FObjectInitializer& ObjectInitializer);
-
-	UFUNCTION(BlueprintCallable, Category = "Noto|Pawn")
+	UFUNCTION(BlueprintCallable, Category = "Noto|Input")
 	const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
 #if WITH_EDITOR
@@ -48,5 +46,5 @@ public:
 
 	// List of input actions used by the owner. These input actions are mapped to a gameplay tag and must be manually bound.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputAction"))
-	TArray<FNotoInputAction> NativeInputActions;
+	TArray<FNotoTaggedInputAction> NativeInputActions;
 };

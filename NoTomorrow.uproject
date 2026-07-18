@@ -7,15 +7,6 @@
 		{
 			"Name": "NoTomorrowGame",
 			"Type": "Runtime",
-			"LoadingPhase": "Default",
-			"AdditionalDependencies": [
-				"DeveloperSettings",
-				"Engine"
-			]
-		},
-		{
-			"Name": "NoTomorrowEditor",
-			"Type": "Editor",
 			"LoadingPhase": "Default"
 		}
 	],

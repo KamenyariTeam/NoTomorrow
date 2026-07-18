@@ -5,9 +5,6 @@
 #include "ModularCharacter.h"
 #include "NotoCharacter.generated.h"
 
-class AController;
-class ANotoPlayerController;
-class ANotoPlayerState;
 class UInputComponent;
 class UGameplayCameraComponent;
 
@@ -25,19 +22,9 @@ public:
 	// Constructor with default object initializer.
 	ANotoCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	// Returns the player controller, if available.
-	UFUNCTION(BlueprintCallable, Category = "Noto|Character")
-	ANotoPlayerController* GetNotoPlayerController() const;
-
-	// AActor interface overrides.
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void Reset() override;
+	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 protected:
-	// Disables movement and collision (used during death).
-	void DisableMovementAndCollision();
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UGameplayCameraComponent> GameplayCameraComponent;
 };

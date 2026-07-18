@@ -13,18 +13,12 @@ public class NoTomorrowGame : ModuleRules
 		PublicDependencyModuleNames.AddRange([
 			"Core",
 			"CoreUObject",
-			"DeveloperSettings",
 			"Engine",
 			"InputCore",
 			"EnhancedInput",
 			"ModularGameplay",
 			"ModularGameplayActors",
-			"UMG",
-			"GameFeatures",
-			"GameplayTags",
-			"GameplayExperience",
-			"Slate",
-			"SlateCore"
+			"GameplayTags"
 		]);
 
 		PrivateDependencyModuleNames.AddRange(["GameplayCameras"]);

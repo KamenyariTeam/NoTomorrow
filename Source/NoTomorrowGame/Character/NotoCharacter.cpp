@@ -1,11 +1,9 @@
 ﻿// © 2025 Kamenyari. All rights reserved.
 
 #include "NotoCharacter.h"
-#include "GameFramework/Controller.h"
 #include "Components/CapsuleComponent.h"
-#include "NotoCharacterMovementComponent.h"
 #include "GameFramework/GameplayCameraComponent.h"
-#include "Player/NotoPlayerController.h"
+#include "NotoPlayerPawnComponent.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -38,47 +36,12 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	CrouchedEyeHeight = 50.0f;
 }
 
-ANotoPlayerController* ANotoCharacter::GetNotoPlayerController() const
+void ANotoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
-	return Cast<ANotoPlayerController>(Controller);
-}
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-void ANotoCharacter::BeginPlay()
-{
-	Super::BeginPlay();
-	// Additional initialization can occur here.
-}
-
-void ANotoCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	Super::EndPlay(EndPlayReason);
-	// Clean-up code can go here.
-}
-
-void ANotoCharacter::Reset()
-{
-	// Disable movement and collision, then reset the character.
-	DisableMovementAndCollision();
-}
-
-void ANotoCharacter::DisableMovementAndCollision()
-{
-	// Ignore further movement input.
-	if (Controller)
+	if (UNotoPlayerPawnComponent* PlayerPawnComponent = FindComponentByClass<UNotoPlayerPawnComponent>())
 	{
-		Controller->SetIgnoreMoveInput(true);
-	}
-
-	// Disable collision on the capsule.
-	UCapsuleComponent* CapsuleComp = GetCapsuleComponent();
-	check(CapsuleComp);
-	CapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	CapsuleComp->SetCollisionResponseToAllChannels(ECR_Ignore);
-
-	// Stop movement immediately and disable movement.
-	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
-	{
-		MoveComp->StopMovementImmediately();
-		MoveComp->DisableMovement();
+		PlayerPawnComponent->InitializePlayerInput(PlayerInputComponent);
 	}
 }
