@@ -8,8 +8,7 @@
 
 class AActor;
 class UInputMappingContext;
-class UPlayer;
-class APlayerController;
+class ULocalPlayer;
 struct FComponentRequestHandle;
 
 USTRUCT()
@@ -59,7 +58,7 @@ private:
 	struct FPerContextData
 	{
 		TArray<TSharedPtr<FComponentRequestHandle>> ExtensionRequestHandles;
-		TArray<TWeakObjectPtr<APlayerController>> ControllersAddedTo;
+		TMap<TWeakObjectPtr<ULocalPlayer>, TArray<TWeakObjectPtr<const UInputMappingContext>>> AppliedMappings;
 	};
 
 	TMap<FGameFeatureStateChangeContext, FPerContextData> ContextData;
@@ -91,6 +90,6 @@ private:
 
 	void Reset(FPerContextData& ActiveData);
 	void HandleControllerExtension(AActor* Actor, FName EventName, FGameFeatureStateChangeContext ChangeContext);
-	void AddInputMappingForPlayer(UPlayer* Player, FPerContextData& ActiveData);
-	void RemoveInputMapping(APlayerController* PlayerController, FPerContextData& ActiveData);
+	void AddInputMappingsForLocalPlayer(ULocalPlayer* LocalPlayer, FPerContextData& ActiveData);
+	void RemoveInputMappingsForLocalPlayer(ULocalPlayer* LocalPlayer, FPerContextData& ActiveData);
 };

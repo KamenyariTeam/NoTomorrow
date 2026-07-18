@@ -4,7 +4,6 @@
 
 #include "Engine/DataAsset.h"
 #include "GameplayTagContainer.h"
-#include "GameFeatures/GameFeatureAction_AddInputContextMapping.h"
 #include "NotoInputConfig.generated.h"
 
 class UInputAction;
@@ -42,6 +41,10 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Noto|Pawn")
 	const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
+
+#if WITH_EDITOR
+	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
+#endif
 
 	// List of input actions used by the owner. These input actions are mapped to a gameplay tag and must be manually bound.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputAction"))

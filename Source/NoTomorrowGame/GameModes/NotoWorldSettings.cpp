@@ -33,8 +33,9 @@ void ANotoWorldSettings::CheckForErrors()
 	}
 }
 
+#endif
+
 FPrimaryAssetId ANotoWorldSettings::GetGameExperience() const
 {
 	return GameplayExperience;
 }
-#endif

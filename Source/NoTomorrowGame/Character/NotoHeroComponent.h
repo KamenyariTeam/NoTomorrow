@@ -9,10 +9,10 @@
 class UInputComponent;
 class UNotoInputConfig;
 class APlayerController;
+class AController;
 
 /**
- * Component that sets up input and camera handling for player controlled pawns (or bots that simulate players).
- * This depends on a PawnExtensionComponent to coordinate initialization.
+ * Component that sets up input and camera handling for a locally controlled pawn.
  */
 UCLASS(Blueprintable, Meta = (BlueprintSpawnableComponent))
 class NOTOMORROWGAME_API UNotoHeroComponent : public UPawnComponent
@@ -32,10 +32,18 @@ protected:
 	//~ Begin UPawnComponent interface
 	virtual void OnRegister() override;
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	//~ End UPawnComponent interface
 	
-	void InitializePlayerInput();
+	void TryInitializePlayerInput();
+	void ResetPlayerInputBindings();
+
+	UFUNCTION()
+	void HandlePawnControllerChanged(APawn* Pawn, AController* OldController, AController* NewController);
+
+	UFUNCTION()
+	void HandlePawnRestarted(APawn* Pawn);
 	
 	// Input binding callbacks
 	void Input_Move(const FInputActionValue& InputActionValue);
@@ -53,4 +61,7 @@ protected:
 
 	/** True if input bindings have been applied. */
 	bool bReadyToBindInputs;
+
+	TWeakObjectPtr<APlayerController> BoundPlayerController;
+	TWeakObjectPtr<UInputComponent> BoundInputComponent;
 };

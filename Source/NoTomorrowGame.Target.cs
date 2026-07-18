@@ -10,11 +10,5 @@ public class NoTomorrowGameTarget : TargetRules
 		DefaultBuildSettings = BuildSettingsVersion.Latest;
 		IncludeOrderVersion = EngineIncludeOrderVersion.Latest;
 		ExtraModuleNames.Add("NoTomorrowGame");
-		RegisterModulesCreatedByRider();
-	}
-
-	private void RegisterModulesCreatedByRider()
-	{
-		ExtraModuleNames.AddRange(new string[] { "NoTomorrowEditor" });
 	}
 }

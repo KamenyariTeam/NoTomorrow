@@ -35,7 +35,7 @@ void UGameFeatureAction_AddInputContextMapping::OnGameFeatureActivating(FGameFea
 {
 	FPerContextData& ActiveData = ContextData.FindOrAdd(Context);
 	if (!ensure(ActiveData.ExtensionRequestHandles.IsEmpty()) ||
-		!ensure(ActiveData.ControllersAddedTo.IsEmpty()))
+		!ensure(ActiveData.AppliedMappings.IsEmpty()))
 	{
 		Reset(ActiveData);
 	}
@@ -50,6 +50,7 @@ void UGameFeatureAction_AddInputContextMapping::OnGameFeatureDeactivating(FGameF
 	if (ensure(ActiveData))
 	{
 		Reset(*ActiveData);
+		ContextData.Remove(Context);
 	}
 }
 
@@ -213,17 +214,23 @@ void UGameFeatureAction_AddInputContextMapping::Reset(FPerContextData& ActiveDat
 {
 	ActiveData.ExtensionRequestHandles.Empty();
 
-	while (!ActiveData.ControllersAddedTo.IsEmpty())
+	for (auto AppliedMappingsIt = ActiveData.AppliedMappings.CreateIterator(); AppliedMappingsIt; ++AppliedMappingsIt)
 	{
-		TWeakObjectPtr<APlayerController> ControllerPtr = ActiveData.ControllersAddedTo.Top();
-		if (ControllerPtr.IsValid())
+		if (ULocalPlayer* LocalPlayer = AppliedMappingsIt.Key().Get())
 		{
-			RemoveInputMapping(ControllerPtr.Get(), ActiveData);
+			if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+			{
+				for (const TWeakObjectPtr<const UInputMappingContext>& MappingContext : AppliedMappingsIt.Value())
+				{
+					if (MappingContext.IsValid())
+					{
+						InputSystem->RemoveMappingContext(MappingContext.Get());
+					}
+				}
+			}
 		}
-		else
-		{
-			ActiveData.ControllersAddedTo.Pop();
-		}
+
+		AppliedMappingsIt.RemoveCurrent();
 	}
 }
 
@@ -232,55 +239,76 @@ void UGameFeatureAction_AddInputContextMapping::HandleControllerExtension(AActor
 	APlayerController* AsController = CastChecked<APlayerController>(Actor);
 	FPerContextData& ActiveData = ContextData.FindOrAdd(ChangeContext);
 
-	// TODO Why does this code mix and match controllers and local players? ControllersAddedTo is never modified
 	if ((EventName == UGameFrameworkComponentManager::NAME_ExtensionRemoved) || (EventName == UGameFrameworkComponentManager::NAME_ReceiverRemoved))
 	{
-		RemoveInputMapping(AsController, ActiveData);
+		RemoveInputMappingsForLocalPlayer(AsController->GetLocalPlayer(), ActiveData);
 	}
 	else if ((EventName == UGameFrameworkComponentManager::NAME_ExtensionAdded) || (EventName == UNotoHeroComponent::NAME_BindInputsNow))
 	{
-		AddInputMappingForPlayer(AsController->GetLocalPlayer(), ActiveData);
+		AddInputMappingsForLocalPlayer(AsController->GetLocalPlayer(), ActiveData);
 	}
 }
 
-void UGameFeatureAction_AddInputContextMapping::AddInputMappingForPlayer(UPlayer* Player, FPerContextData& ActiveData)
+void UGameFeatureAction_AddInputContextMapping::AddInputMappingsForLocalPlayer(ULocalPlayer* LocalPlayer, FPerContextData& ActiveData)
 {
-	if (ULocalPlayer* LocalPlayer = Cast<ULocalPlayer>(Player))
+	if (!LocalPlayer || ActiveData.AppliedMappings.Contains(LocalPlayer))
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		return;
+	}
+
+	if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+	{
+		TArray<TWeakObjectPtr<const UInputMappingContext>> AddedMappings;
+		UNotoAssetManager& AssetManager = UNotoAssetManager::Get();
+
+		for (const FInputMappingContextAndPriority& Entry : InputMappings)
 		{
-			for (const FInputMappingContextAndPriority& Entry : InputMappings)
+			if (UInputMappingContext* MappingContext = AssetManager.GetAsset(Entry.InputMapping))
 			{
-				if (const UInputMappingContext* IMC = Entry.InputMapping.Get())
+				// Leave contexts that another system already installed untouched. This
+				// action only owns and removes contexts it added itself.
+				if (!InputSystem->HasMappingContext(MappingContext))
 				{
-					InputSystem->AddMappingContext(IMC, Entry.Priority);
+					InputSystem->AddMappingContext(MappingContext, Entry.Priority);
+					AddedMappings.Add(MappingContext);
 				}
 			}
 		}
-		else
+
+		if (!AddedMappings.IsEmpty())
 		{
-			UE_LOG(LogGameFeatures, Error, TEXT("Failed to find `UEnhancedInputLocalPlayerSubsystem` for local player. Input mappings will not be added. Make sure you're set to use the EnhancedInput system via config file."));
+			ActiveData.AppliedMappings.Add(LocalPlayer, MoveTemp(AddedMappings));
 		}
+	}
+	else
+	{
+		UE_LOG(LogGameFeatures, Error, TEXT("Failed to find `UEnhancedInputLocalPlayerSubsystem` for local player. Input mappings will not be added. Make sure you're set to use the EnhancedInput system via config file."));
 	}
 }
 
-void UGameFeatureAction_AddInputContextMapping::RemoveInputMapping(APlayerController* PlayerController, FPerContextData& ActiveData)
+void UGameFeatureAction_AddInputContextMapping::RemoveInputMappingsForLocalPlayer(ULocalPlayer* LocalPlayer, FPerContextData& ActiveData)
 {
-	if (ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer())
+	if (!LocalPlayer)
 	{
-		if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+		return;
+	}
+
+	TArray<TWeakObjectPtr<const UInputMappingContext>> AppliedMappings;
+	if (!ActiveData.AppliedMappings.RemoveAndCopyValue(LocalPlayer, AppliedMappings))
+	{
+		return;
+	}
+
+	if (UEnhancedInputLocalPlayerSubsystem* InputSystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+	{
+		for (const TWeakObjectPtr<const UInputMappingContext>& MappingContext : AppliedMappings)
 		{
-			for (const FInputMappingContextAndPriority& Entry : InputMappings)
+			if (MappingContext.IsValid())
 			{
-				if (const UInputMappingContext* IMC = Entry.InputMapping.Get())
-				{
-					InputSystem->RemoveMappingContext(IMC);
-				}
+				InputSystem->RemoveMappingContext(MappingContext.Get());
 			}
 		}
 	}
-
-	ActiveData.ControllersAddedTo.Remove(PlayerController);
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -25,18 +25,23 @@ public:
 	UNotoInputComponent(const FObjectInitializer& ObjectInitializer);
 	
 	template<class UserClass, typename FuncType>
-	void BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound);
+	bool BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound);
 
 	void RemoveBinds(TArray<uint32>& BindHandles);
 };
 
 
 template<class UserClass, typename FuncType>
-void UNotoInputComponent::BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound)
+bool UNotoInputComponent::BindNativeAction(const UNotoInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound)
 {
-	check(InputConfig);
-	if (const UInputAction* IA = InputConfig->FindNativeInputActionForTag(InputTag, bLogIfNotFound))
+	if (InputConfig)
 	{
-		BindAction(IA, TriggerEvent, Object, Func);
+		if (const UInputAction* InputAction = InputConfig->FindNativeInputActionForTag(InputTag, bLogIfNotFound))
+		{
+			BindAction(InputAction, TriggerEvent, Object, Func);
+			return true;
+		}
 	}
+
+	return false;
 }

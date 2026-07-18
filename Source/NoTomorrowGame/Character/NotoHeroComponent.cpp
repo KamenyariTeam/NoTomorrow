@@ -50,54 +50,103 @@ void UNotoHeroComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitializePlayerInput();
+	if (APawn* Pawn = GetPawn<APawn>())
+	{
+		Pawn->ReceiveControllerChangedDelegate.AddUniqueDynamic(this, &ThisClass::HandlePawnControllerChanged);
+		Pawn->ReceiveRestartedDelegate.AddUniqueDynamic(this, &ThisClass::HandlePawnRestarted);
+	}
+
+	TryInitializePlayerInput();
+}
+
+void UNotoHeroComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (APawn* Pawn = GetPawn<APawn>())
+	{
+		Pawn->ReceiveControllerChangedDelegate.RemoveDynamic(this, &ThisClass::HandlePawnControllerChanged);
+		Pawn->ReceiveRestartedDelegate.RemoveDynamic(this, &ThisClass::HandlePawnRestarted);
+	}
+
+	ResetPlayerInputBindings();
+
+	Super::EndPlay(EndPlayReason);
 }
 
 void UNotoHeroComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+	TryInitializePlayerInput();
 	UpdateAimFromMouseCursor();
 }
 
-void UNotoHeroComponent::InitializePlayerInput()
+void UNotoHeroComponent::TryInitializePlayerInput()
 {
-	const APawn* Pawn = GetPawn<APawn>();
-	if (!Pawn)
+	APawn* Pawn = GetPawn<APawn>();
+	APlayerController* PlayerController = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
+	UInputComponent* PlayerInputComponent = Pawn ? Pawn->InputComponent : nullptr;
+
+	if (bReadyToBindInputs && Pawn && Pawn->IsLocallyControlled() && BoundPlayerController.Get() == PlayerController && BoundInputComponent.Get() == PlayerInputComponent)
 	{
 		return;
 	}
 
-	UInputComponent* PlayerInputComponent = Pawn->InputComponent;
-	check(PlayerInputComponent);
-	
-	const APlayerController* PC = GetController<APlayerController>();
-	check(PC);
+	if (bReadyToBindInputs)
+	{
+		ResetPlayerInputBindings();
+	}
 
-	const ULocalPlayer* LP = Cast<ULocalPlayer>(PC->GetLocalPlayer());
-	check(LP);
+	if (!Pawn || !Pawn->IsLocallyControlled() || !PlayerController || !PlayerInputComponent)
+	{
+		return;
+	}
 
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-	check(Subsystem);
+	const ULocalPlayer* LocalPlayer = PlayerController->GetLocalPlayer();
+	if (!LocalPlayer || !LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+	{
+		return;
+	}
 
-	Subsystem->ClearAllMappings();
-	
-	// The Noto Input Component has some additional functions to map Gameplay Tags to an Input Action.
-	// If you want this functionality but still want to change your input component class, make it a subclass
-	// of the UNotoInputComponent or modify this component accordingly.
 	UNotoInputComponent* NotoIC = Cast<UNotoInputComponent>(PlayerInputComponent);
-	if (ensureMsgf(NotoIC, TEXT("Unexpected Input Component class! The Gameplay Abilities will not be bound to their inputs. Change the input component to UNotoInputComponent or a subclass of it.")))
+	if (!ensureMsgf(NotoIC, TEXT("Unexpected Input Component class! Native input bindings require UNotoInputComponent or a subclass.")) || !ensure(DefaultInputConfig))
 	{
-		NotoIC->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this, &ThisClass::Input_Move, /*bLogIfNotFound=*/ false);
+		return;
 	}
 
-	if (ensure(!bReadyToBindInputs))
+	if (!NotoIC->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this, &ThisClass::Input_Move, /*bLogIfNotFound=*/ true))
 	{
-		bReadyToBindInputs = true;
+		return;
 	}
-	
-	UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(const_cast<APlayerController*>(PC), NAME_BindInputsNow);
-	UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(const_cast<APawn*>(Pawn), NAME_BindInputsNow);
+
+	bReadyToBindInputs = true;
+	BoundPlayerController = PlayerController;
+	BoundInputComponent = PlayerInputComponent;
+
+	UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(PlayerController, NAME_BindInputsNow);
+	UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(Pawn, NAME_BindInputsNow);
+}
+
+void UNotoHeroComponent::ResetPlayerInputBindings()
+{
+	if (UNotoInputComponent* NotoInputComponent = Cast<UNotoInputComponent>(BoundInputComponent.Get()))
+	{
+		NotoInputComponent->ClearBindingsForObject(this);
+	}
+
+	bReadyToBindInputs = false;
+	BoundPlayerController.Reset();
+	BoundInputComponent.Reset();
+}
+
+void UNotoHeroComponent::HandlePawnControllerChanged(APawn* Pawn, AController* OldController, AController* NewController)
+{
+	ResetPlayerInputBindings();
+	TryInitializePlayerInput();
+}
+
+void UNotoHeroComponent::HandlePawnRestarted(APawn* Pawn)
+{
+	TryInitializePlayerInput();
 }
 
 bool UNotoHeroComponent::IsReadyToBindInputs() const

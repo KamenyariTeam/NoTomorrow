@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "ModularHUD.h"
+#include "GameFramework/HUD.h"
 #include "NotoHUD.generated.h"
 
 /**
@@ -12,7 +12,7 @@
  * Serves as the interface between game logic and the player’s visual UI.
  */
 UCLASS()
-class NOTOMORROWGAME_API ANotoHUD : public AModularHUD
+class NOTOMORROWGAME_API ANotoHUD : public AHUD
 {
 	GENERATED_BODY()
 };
