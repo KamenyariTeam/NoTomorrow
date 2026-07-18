@@ -1,96 +1,85 @@
-# 🎮 No Tomorrow (Project Heist)
+# No Tomorrow
 
-**No Tomorrow** is a top-down immersive sim set in a collapsing world where the player plans and executes heists while facing anomalies and moral dilemmas.
+No Tomorrow is an early-stage top-down immersive sim about planning and executing heists in a collapsing world.
 
----
+The project is currently focused on building its gameplay and tooling foundations. Heists, anomalies, systemic interactions, branching narrative, and possible future co-op are design goals rather than a list of completed features.
 
-## 🧠 About the Game
+## Current technical foundation
 
-> **"If the world no longer gives you chances — go and take yours."**
+- `NoTomorrowGame`: runtime module with game framework classes, Enhanced Input, gameplay-camera support, asset/experience loading, gameplay tags, Game Feature actions, and the current HUD foundation.
+- `NoTomorrowEditor`: editor module with a custom editor engine, common-map toolbar support, PIE setup, and editor tooling dependencies.
+- `Plugins/GameplayCore`: reusable gameplay-experience loading, tagged gameplay events, Blueprint async support, an uncooked Blueprint-node module, and related automation tests.
+- `Plugins/ModularGameplayActors`: reusable modular actor, pawn, character, controller, GameMode/GameState, HUD, and component bases.
+- Engine integrations include Common UI, Game Features, Modular Gameplay, Enhanced Input, Gameplay Tags, and Gameplay Cameras.
 
-- **Genre:** Immersive Sim / Tactical Stealth / Top-down  
-- **Engine:** Unreal Engine 5.8.1 
-- **Platforms:** PC
-- **Codebase:** C++ / Blueprints  
-- **Features:** Anomalies, deep interactivity, multiple approaches to progression, branching story
+C++ implements the engine-facing foundations and reusable systems. Blueprints and content configure concrete game classes, the default character, input and camera assets, the default gameplay experience, cursors, and maps.
 
----
+## Requirements
 
-## 🚀 How to Run
+- Unreal Engine 5.8, using the project's associated Engine build.
+- JetBrains Rider with Unreal Engine support (primary IDE workflow).
+- A compatible Windows C++ toolchain: MSVC compiler, Windows SDK, and Unreal's required C++ components. Rider is the IDE and does not replace the compiler/toolchain.
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/KamenyariTeam/NoTomorrow.git
-   ```
+## Open and build with Rider
 
-2. **Open the `.uproject` file with Unreal Engine 5.5.4**
+1. Clone the repository, including Git LFS content if the remote uses LFS.
+2. Open `NoTomorrow.uproject` in Rider. Select or register the Unreal Engine 5.8 installation/source checkout when prompted.
+3. Let Rider index the Engine and project, then select the `NoTomorrowEditor` target, `Development Editor` configuration, and `Win64` platform.
+4. Build and run the Editor from Rider. Use Play In Editor for normal iteration.
 
-3. If you need to build:
-   - Right-click on `NoTomorrow.uproject` and select `Generate Visual Studio project files`
-   - Open `NoTomorrow.sln` in Visual Studio
-   - Select `Development Editor` configuration, platform `Win64`
-   - Click `Build`
+Unreal-generated solution and project files are local output and are not authoritative. Regenerate them through Rider or Unreal's project-file generation when required.
 
-4. **Play in Editor (PIE)** — press `Play` in the toolbar
+### Command-line build
 
----
+When a terminal build is useful, set `UE_ROOT` to the root of the Engine installation or source checkout that owns `Engine/Build/BatchFiles/Build.bat`. From the repository root in PowerShell:
 
-## ✅ Requirements
+```powershell
+& "$env:UE_ROOT\Engine\Build\BatchFiles\Build.bat" NoTomorrowEditor Win64 Development -Project="$PWD\NoTomorrow.uproject" -WaitMutex
+```
 
-- **Unreal Engine:** 5.8.1
-- **Visual Studio:** 2026 or newer (with "Game development with C++" installed)
-- **ReSharper C++ (optional)** for improved autocomplete and analysis
+Do not copy another developer's absolute Engine path. Rider's Engine association or the local `.uproject` registration is the source for locating it.
 
----
+## Important folders
 
-## 📁 Folders
+| Path | Purpose |
+| --- | --- |
+| `Source/NoTomorrowGame/` | Runtime C++ module: character, camera, input, game modes, Game Feature actions, systems, player, and UI foundations |
+| `Source/NoTomorrowEditor/` | Editor-only module and custom editor engine/tooling |
+| `Plugins/GameplayCore/` | Gameplay experiences, tagged events, Blueprint nodes, tests, and plugin content |
+| `Plugins/ModularGameplayActors/` | Reusable Modular Gameplay actor and component bases |
+| `Config/` | Engine, game, input, gameplay-tag, and asset-manager configuration |
+| `Content/Characters/` | Current character Blueprints and camera assets |
+| `Content/Input/` | Enhanced Input actions, mapping contexts, and input data |
+| `Content/System/` | Default map and gameplay-experience assets |
+| `Content/UI/` | Cursor and UI foundation assets |
 
-| Folder | Purpose |
-|--------|---------|
-| `/Art/`             | Models, materials, textures |
-| `/Audio/`           | Sounds and music |
-| `/Blueprints/Core/` | GameMode, Controller, Character |
-| `/Blueprints/UI/`   | User Interface |
-| `/Blueprints/Data/` | DataTables, Enums, Configs |
-| `/Maps/`            | Playable maps |
+`Binaries/`, `DerivedDataCache/`, `Intermediate/`, `Saved/`, `.idea/`, `.vs/`, and generated solution/project files are local or generated output; do not edit or commit them.
 
----
+## Naming
 
-## 🧾 File Naming Convention
+### Assets
 
-We use consistent prefixes and conventions to help organize and search assets and code more easily.
+Use the established Unreal-style prefixes and preserve nearby naming families:
 
-### 🔷 Blueprint & Asset Prefixes
+| Prefix | Asset type | Example |
+| --- | --- | --- |
+| `BP_` | Blueprint | `BP_NotoGameMode` |
+| `W_` | Widget Blueprint | `W_Cursor` |
+| `DA_` | Data Asset | `DA_DefaultExperience` |
+| `IA_` | Input Action | `IA_Move` |
+| `IMC_` | Input Mapping Context | `IMC_Player_Default` |
+| `T_` | Texture | `T_Cursor_Crosshair` |
+| `M_` / `MI_` | Material / Material Instance | `M_Basic_Wall` |
+| `SM_` / `SK_` | Static / Skeletal Mesh | `SM_AssetPlatform` |
 
-| Prefix | Description                  | Example                |
-|--------|------------------------------|------------------------|
-| `BP_`  | Blueprint                    | `BP_PlayerCharacter`   |
-| `W_` | Widget Blueprint (UI)        | `WBP_MainMenu`         |
-| `DT_`  | Data Table                   | `DT_WeaponStats`       |
-| `DA_`  | Data Asset                   | `DA_AnomalyType`       |
-| `T_`   | Texture                      | `T_Icon_Health`        |
-| `M_`   | Material                     | `M_AnomalyDistortion`  |
-| `MI_`  | Material Instance            | `MI_AnomalyBlue`       |
-| `SM_`  | Static Mesh                  | `SM_Locker_01`         |
-| `SK_`  | Skeletal Mesh                | `SK_Character_Thief`   |
-| `SFX_` | Sound Effect                 | `SFX_Gunshot`          |
+Use `W_` consistently for Widget Blueprints in this repository. Introduce a new prefix only when a real asset family needs one.
 
-### 🟦 C++ Naming Convention
+### C++
 
-| Element       | Convention                                             | Example                                                     |
-|---------------|--------------------------------------------------------|-------------------------------------------------------------|
-| Class         | Unreal-style prefix (`A` or `U`) + `Noto` + PascalCase | `class ANotoInventoryManager` / `class UNotoInventorySubsystem` |
-| Interface     | `I` prefix + `Noto` + PascalCase                       | `class INotoInteractable`                                   |
-| Struct        | `F` prefix + `Noto` + PascalCase                       | `struct FNotoAnomalyData`                                   |
-| Enum          | `E` prefix + `Noto` + PascalCase                       | `enum class ENotoAnomalyType`                               |
-| Variable      | CamelCase                                              | `playerHealth`, `isVisible`                                 |
-| Function      | PascalCase                                             | `BeginPlay()`, `Interact()`                                 |
-| UPROPERTY     | `UPROPERTY(...)` + clear name                          | `UPROPERTY(EditAnywhere) float DetectionRange;`             |
-| UFUNCTION     | `UFUNCTION(...)` + PascalCase                          | `UFUNCTION(BlueprintCallable) void ResetState();`           |
+- Follow Unreal type prefixes (`A`, `U`, `F`, `E`, `I`, `T`) and prefix booleans with `b`.
+- Use PascalCase for types, functions, members, parameters, and local variables, consistent with Unreal style and nearby code.
+- Preserve `Noto` for existing game-specific families. Use it for new public/exported main-game types when it improves consistency or collision resistance; it is not required on every symbol.
+- Reusable plugin types should use their plugin or module domain rather than `Noto`. Private helpers need no project prefix when scope is clear.
+- Do not mass-rename existing symbols to normalize style.
 
-**General Rules:**
-- Always use descriptive, context-aware names.
-- Avoid abbreviations unless widely understood.
-- Keep consistency across the codebase and assets.
-
----
+For coding-agent guidance and architectural boundaries, see `AGENTS.md` and `.agents/documents/`.
