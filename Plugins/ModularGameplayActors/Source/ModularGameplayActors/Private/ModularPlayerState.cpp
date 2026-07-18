@@ -1,8 +1,11 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #include "ModularPlayerState.h"
 
-#include "Components/GameFrameworkComponent.h"
 #include "Components/GameFrameworkComponentManager.h"
 #include "Components/PlayerStateComponent.h"
+
+#include UE_INLINE_GENERATED_CPP_BY_NAME(ModularPlayerState)
 
 void AModularPlayerState::PreInitializeComponents()
 {
@@ -14,14 +17,14 @@ void AModularPlayerState::PreInitializeComponents()
 void AModularPlayerState::BeginPlay()
 {
 	UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(this, UGameFrameworkComponentManager::NAME_GameActorReady);
-	
+
 	Super::BeginPlay();
 }
 
 void AModularPlayerState::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UGameFrameworkComponentManager::RemoveGameFrameworkComponentReceiver(this);
-	
+
 	Super::EndPlay(EndPlayReason);
 }
 
@@ -29,9 +32,11 @@ void AModularPlayerState::Reset()
 {
 	Super::Reset();
 
-	for (TComponentIterator<UPlayerStateComponent> It(this); It; ++It)
+	TArray<UPlayerStateComponent*> ModularComponents;
+	GetComponents(ModularComponents);
+	for (UPlayerStateComponent* Component : ModularComponents)
 	{
-		It->Reset();
+		Component->Reset();
 	}
 }
 
@@ -39,12 +44,13 @@ void AModularPlayerState::CopyProperties(APlayerState* PlayerState)
 {
 	Super::CopyProperties(PlayerState);
 
-	for (TComponentIterator<UPlayerStateComponent> It(this); It; ++It)
+	TInlineComponentArray<UPlayerStateComponent*> PlayerStateComponents;
+	GetComponents(PlayerStateComponents);
+	for (UPlayerStateComponent* SourcePSComp : PlayerStateComponents)
 	{
-		UObject* TargetObj = static_cast<UObject*>(FindObjectWithOuter(PlayerState, It->GetClass(), It->GetFName()));
-		if (UPlayerStateComponent* TargetComp = Cast<UPlayerStateComponent>(TargetObj))
+		if (UPlayerStateComponent* TargetComp = Cast<UPlayerStateComponent>(static_cast<UObject*>(FindObjectWithOuter(PlayerState, SourcePSComp->GetClass(), SourcePSComp->GetFName()))))
 		{
-			It->CopyProperties(TargetComp);
+			SourcePSComp->CopyProperties(TargetComp);
 		}
 	}
 }

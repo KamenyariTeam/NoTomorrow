@@ -1,23 +1,17 @@
 ﻿// © 2025 Kamenyari. All rights reserved.
 
 #include "NotoHeroComponent.h"
-#include "GameFramework/PlayerController.h"
-#include "Engine/World.h"
+
 #include "EnhancedInputSubsystems.h"
-#include "GameFramework/Pawn.h"
 #include "InputAction.h"
 #include "Components/GameFrameworkComponentManager.h"
 #include "Development/NotoGameplayTags.h"
 #include "Development/NotoLogChannels.h"
+#include "Engine/World.h"
+#include "GameFramework/Pawn.h"
+#include "GameFramework/PlayerController.h"
 #include "Input/NotoInputComponent.h"
 #include "Misc/UObjectToken.h"
-
-namespace NotoHero
-{
-	// Rates used for look input adjustments.
-	static const float LookYawRate = 300.0f;
-	static const float LookPitchRate = 165.0f;
-}
 
 const FName UNotoHeroComponent::NAME_BindInputsNow("BindInputsNow");
 
@@ -63,8 +57,7 @@ void UNotoHeroComponent::TickComponent(float DeltaTime, enum ELevelTick TickType
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	// TODO: Disable this when we are not using the mouse.
-	Input_LookMouse();
+	UpdateAimFromMouseCursor();
 }
 
 void UNotoHeroComponent::InitializePlayerInput()
@@ -96,8 +89,6 @@ void UNotoHeroComponent::InitializePlayerInput()
 	if (ensureMsgf(NotoIC, TEXT("Unexpected Input Component class! The Gameplay Abilities will not be bound to their inputs. Change the input component to UNotoInputComponent or a subclass of it.")))
 	{
 		NotoIC->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Move, ETriggerEvent::Triggered, this, &ThisClass::Input_Move, /*bLogIfNotFound=*/ false);
-		// Unfortunately, Mouse 2D input is not working correctly while cursor is showing.
-		// NotoIC->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Look_Mouse, ETriggerEvent::Triggered, this, &ThisClass::Input_LookMouse, /*bLogIfNotFound=*/ false);
 	}
 
 	if (ensure(!bReadyToBindInputs))
@@ -144,52 +135,52 @@ void UNotoHeroComponent::Input_Move(const FInputActionValue& InputActionValue)
 	}
 }
 
-void UNotoHeroComponent::Input_LookMouse(/*const FInputActionValue& InputActionValue*/)
+void UNotoHeroComponent::UpdateAimFromMouseCursor()
 {
-	APawn* Pawn = Cast<APawn>(GetOwner());
-	if (!Pawn)
+	if (!bAimWithMouseCursor)
 	{
 		return;
 	}
 
-	const APlayerController* PC = GetController<APlayerController>();
-	if (!PC)
+	APawn* Pawn = GetPawn<APawn>();
+	if (!Pawn || !Pawn->IsLocallyControlled())
 	{
 		return;
 	}
 
-	FVector MouseWorldPosition;
-	FVector MouseWorldDirection;
-
-	// De-project the cursor to a world-space ray.
-	if (PC->DeprojectMousePositionToWorld(MouseWorldPosition, MouseWorldDirection))
+	const APlayerController* PlayerController = Cast<APlayerController>(Pawn->GetController());
+	if (!PlayerController || !PlayerController->ShouldShowMouseCursor())
 	{
-		// Intersect the ray with the horizontal plane at the pawn’s Z height.
-		const float PawnZ = Pawn->GetActorLocation().Z;
-
-		// Guard against rays parallel to the plane.
-		if (!FMath::IsNearlyZero(MouseWorldDirection.Z))
-		{
-			const float Distance = (PawnZ - MouseWorldPosition.Z) / MouseWorldDirection.Z;
-
-			// Only use intersections that lie in front of the camera.
-			if (Distance > 0.0f)
-			{
-				const FVector HitPosition = MouseWorldPosition + MouseWorldDirection * Distance;
-
-				// Calculate the 2D direction from pawn to intersection point.
-				FVector DirectionToMouse = HitPosition - Pawn->GetActorLocation();
-				DirectionToMouse.Z = 0.0f;
-				DirectionToMouse.Normalize();
-
-				if (!DirectionToMouse.IsNearlyZero())
-				{
-					const FRotator NewRotation = DirectionToMouse.Rotation();
-
-					// Apply only the yaw so the pawn faces the cursor.
-					Pawn->SetActorRotation(FRotator(0.0f, NewRotation.Yaw, 0.0f));
-				}
-			}
-		}
+		return;
 	}
+
+	FVector AimDirection;
+	if (GetMouseAimDirection(*PlayerController, *Pawn, AimDirection))
+	{
+		// Control rotation remains the movement reference in Input_Move, so cursor
+		// aiming rotates the pawn without changing the player's movement axes.
+		Pawn->SetActorRotation(AimDirection.Rotation());
+	}
+}
+
+bool UNotoHeroComponent::GetMouseAimDirection(const APlayerController& PlayerController, const APawn& Pawn, FVector& OutAimDirection) const
+{
+	FVector RayOrigin;
+	FVector RayDirection;
+	if (!PlayerController.DeprojectMousePositionToWorld(RayOrigin, RayDirection))
+	{
+		return false;
+	}
+
+	const FVector PawnLocation = Pawn.GetActorLocation();
+	const FPlane AimPlane(PawnLocation, FVector::UpVector);
+	const double IntersectionDistance = FMath::RayPlaneIntersectionParam(RayOrigin, RayDirection, AimPlane);
+	if (IntersectionDistance <= 0.0)
+	{
+		return false;
+	}
+
+	const FVector MouseWorldPosition = RayOrigin + RayDirection * IntersectionDistance;
+	OutAimDirection = (MouseWorldPosition - PawnLocation).GetSafeNormal2D();
+	return !OutAimDirection.IsNearlyZero();
 }

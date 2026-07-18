@@ -1,12 +1,11 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #include "ModularPlayerController.h"
 
 #include "Components/ControllerComponent.h"
-#include "Components/GameFrameworkComponent.h"
 #include "Components/GameFrameworkComponentManager.h"
 
-AModularPlayerController::AModularPlayerController(const FObjectInitializer& Initializer): Super(Initializer)
-{
-}
+#include UE_INLINE_GENERATED_CPP_BY_NAME(ModularPlayerController)
 
 void AModularPlayerController::PreInitializeComponents()
 {
@@ -18,19 +17,22 @@ void AModularPlayerController::PreInitializeComponents()
 void AModularPlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	UGameFrameworkComponentManager::RemoveGameFrameworkComponentReceiver(this);
-	
+
 	Super::EndPlay(EndPlayReason);
 }
 
 void AModularPlayerController::ReceivedPlayer()
 {
+	// Player controllers always get assigned a player and can't do much until then
 	UGameFrameworkComponentManager::SendGameFrameworkComponentExtensionEvent(this, UGameFrameworkComponentManager::NAME_GameActorReady);
-	
+
 	Super::ReceivedPlayer();
-	
-	for (TComponentIterator<UControllerComponent> It(this); It; ++It)
+
+	TArray<UControllerComponent*> ModularComponents;
+	GetComponents(ModularComponents);
+	for (UControllerComponent* Component : ModularComponents)
 	{
-		It->ReceivedPlayer();
+		Component->ReceivedPlayer();
 	}
 }
 
@@ -38,8 +40,10 @@ void AModularPlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 
-	for (TComponentIterator<UControllerComponent> It(this); It; ++It)
+	TArray<UControllerComponent*> ModularComponents;
+	GetComponents(ModularComponents);
+	for (UControllerComponent* Component : ModularComponents)
 	{
-		It->PlayerTick(DeltaTime);
+		Component->PlayerTick(DeltaTime);
 	}
 }

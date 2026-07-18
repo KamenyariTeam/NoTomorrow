@@ -1,34 +1,47 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
 #include "GameFramework/GameState.h"
 
 #include "ModularGameState.generated.h"
 
-UCLASS(Blueprintable)
-class MODULARGAMEPLAYACTORS_API AModularGameState: public AGameState
+#define UE_API MODULARGAMEPLAYACTORS_API
+
+class UObject;
+
+/** Pair this with a ModularGameModeBase */
+UCLASS(MinimalAPI, Blueprintable)
+class AModularGameStateBase : public AGameStateBase
 {
 	GENERATED_BODY()
-public:
 
-	//~Begin AActor interface
-	virtual void PreInitializeComponents() override;
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	//~End AActor interface
-	
-	virtual void HandleMatchHasStarted() override;
+public:
+	//~ Begin AActor interface
+	UE_API virtual void PreInitializeComponents() override;
+	UE_API virtual void BeginPlay() override;
+	UE_API virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//~ End AActor interface
 };
 
-UCLASS(Blueprintable)
-class MODULARGAMEPLAYACTORS_API AModularGameStateBase: public AGameStateBase
+
+/** Pair this with a ModularGameState */
+UCLASS(MinimalAPI, Blueprintable)
+class AModularGameState : public AGameState
 {
 	GENERATED_BODY()
-public:
 
-	//~Begin AActor interface
-	virtual void PreInitializeComponents() override;
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	//~End AActor interface
+public:
+	//~ Begin AActor interface
+	UE_API virtual void PreInitializeComponents() override;
+	UE_API virtual void BeginPlay() override;
+	UE_API virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//~ End AActor interface
+
+protected:
+	//~ Begin AGameState interface
+	UE_API virtual void HandleMatchHasStarted() override;
+	//~ Begin AGameState interface
 };
+
+#undef UE_API

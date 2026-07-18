@@ -9,7 +9,7 @@
 > **"If the world no longer gives you chances — go and take yours."**
 
 - **Genre:** Immersive Sim / Tactical Stealth / Top-down  
-- **Engine:** Unreal Engine 5.5.4  
+- **Engine:** Unreal Engine 5.8.1 
 - **Platforms:** PC
 - **Codebase:** C++ / Blueprints  
 - **Features:** Anomalies, deep interactivity, multiple approaches to progression, branching story
@@ -37,8 +37,8 @@
 
 ## ✅ Requirements
 
-- **Unreal Engine:** 5.5.4
-- **Visual Studio:** 2022 or newer (with "Game development with C++" installed)
+- **Unreal Engine:** 5.8.1
+- **Visual Studio:** 2026 or newer (with "Game development with C++" installed)
 - **ReSharper C++ (optional)** for improved autocomplete and analysis
 
 ---

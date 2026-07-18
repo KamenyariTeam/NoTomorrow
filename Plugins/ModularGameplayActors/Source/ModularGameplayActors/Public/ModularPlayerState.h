@@ -1,24 +1,35 @@
+// Copyright Epic Games, Inc. All Rights Reserved.
+
 #pragma once
 
-#include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 
 #include "ModularPlayerState.generated.h"
 
-UCLASS(Blueprintable)
-class MODULARGAMEPLAYACTORS_API AModularPlayerState: public APlayerState
+#define UE_API MODULARGAMEPLAYACTORS_API
+
+namespace EEndPlayReason { enum Type : int; }
+
+class UObject;
+
+/** Minimal class that supports extension by game feature plugins */
+UCLASS(MinimalAPI, Blueprintable)
+class AModularPlayerState : public APlayerState
 {
 	GENERATED_BODY()
+
 public:
+	//~ Begin AActor interface
+	UE_API virtual void PreInitializeComponents() override;
+	UE_API virtual void BeginPlay() override;
+	UE_API virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	UE_API virtual void Reset() override;
+	//~ End AActor interface
 
-	//~Begin Actor interface
-	virtual void PreInitializeComponents() override;
-	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	//~End Actor interface
-
-	//~Begin PlayerState interface
-	virtual void Reset() override;
-	virtual void CopyProperties(APlayerState* PlayerState) override;
-	//~End PlayerState interface
+protected:
+	//~ Begin APlayerState interface
+	UE_API virtual void CopyProperties(APlayerState* PlayerState);
+	//~ End APlayerState interface
 };
+
+#undef UE_API

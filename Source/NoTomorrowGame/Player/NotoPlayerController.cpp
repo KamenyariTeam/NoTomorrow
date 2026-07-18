@@ -25,12 +25,18 @@ ANotoPlayerController::ANotoPlayerController(const FObjectInitializer& ObjectIni
 void ANotoPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-	
-	// Show the cursor and lock it to the game viewport
-	bShowMouseCursor = true;
+
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	// Cursor aiming uses the absolute cursor position. Game-and-UI mode keeps
+	// normal gameplay input active while allowing Slate widgets to handle input.
+	SetShowMouseCursor(true);
 	FInputModeGameAndUI InputMode;
 	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-	InputMode.SetHideCursorDuringCapture(false); // Keep cursor visible
+	InputMode.SetHideCursorDuringCapture(false);
 	SetInputMode(InputMode);
 }
 

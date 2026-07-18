@@ -8,6 +8,7 @@
 
 class UInputComponent;
 class UNotoInputConfig;
+class APlayerController;
 
 /**
  * Component that sets up input and camera handling for player controlled pawns (or bots that simulate players).
@@ -38,10 +39,17 @@ protected:
 	
 	// Input binding callbacks
 	void Input_Move(const FInputActionValue& InputActionValue);
-	void Input_LookMouse(/*const FInputActionValue& InputActionValue*/);
+
+	/** Updates aiming from the visible cursor's absolute viewport position. */
+	void UpdateAimFromMouseCursor();
+	bool GetMouseAimDirection(const APlayerController& PlayerController, const APawn& Pawn, FVector& OutAimDirection) const;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UNotoInputConfig> DefaultInputConfig;
+
+	/** Enable cursor aiming. Disable this when another device (for example, a gamepad) owns aiming. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input|Mouse")
+	bool bAimWithMouseCursor = true;
 
 	/** True if input bindings have been applied. */
 	bool bReadyToBindInputs;

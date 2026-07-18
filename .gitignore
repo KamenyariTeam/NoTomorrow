@@ -12,6 +12,7 @@ Saved/
 *.VC.db
 *.VC.opendb
 *.sln
+*.slnx
 *.suo
 *.xcodeproj
 *.xcworkspace

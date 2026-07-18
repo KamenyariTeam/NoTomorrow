@@ -24,8 +24,7 @@ void ANotoWorldSettings::CheckForErrors()
 
 	for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
 	{
-		APlayerStart* PlayerStart = *It;
-		if (IsValid(PlayerStart) && PlayerStart->GetClass() == APlayerStart::StaticClass())
+		if (const APlayerStart* PlayerStart = *It; IsValid(PlayerStart) && PlayerStart->GetClass() == APlayerStart::StaticClass())
 		{
 			MapCheck.Warning()
 				->AddToken(FUObjectToken::Create(PlayerStart))
