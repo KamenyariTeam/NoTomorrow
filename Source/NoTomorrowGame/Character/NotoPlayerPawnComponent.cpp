@@ -39,7 +39,7 @@ void UNotoPlayerPawnComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInputComponent)
 {
-	APawn* Pawn = GetPawn<APawn>();
+	const APawn* Pawn = GetPawn<APawn>();
 	UNotoInputComponent* NotoInputComponent = Cast<UNotoInputComponent>(PlayerInputComponent);
 	if (!ensure(Pawn && Pawn->IsLocallyControlled())
 		|| !ensureMsgf(NotoInputComponent, TEXT("Native input bindings require UNotoInputComponent or a subclass."))

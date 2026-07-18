@@ -14,7 +14,7 @@ const UInputAction* UNotoInputConfig::FindNativeInputActionForTag(const FGamepla
 {
 	for (const FNotoTaggedInputAction& Action : NativeInputActions)
 	{
-		if (Action.InputAction && (Action.InputTag == InputTag))
+		if (Action.InputAction && Action.InputTag == InputTag)
 		{
 			return Action.InputAction;
 		}

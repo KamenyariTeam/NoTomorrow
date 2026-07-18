@@ -1,4 +1,4 @@
-// © 2025 Kamenyari. All rights reserved.
+﻿// © 2025 Kamenyari. All rights reserved.
 
 #pragma once
 
@@ -18,14 +18,17 @@ class NOTOMORROWGAME_API ANotoCharacter : public AModularCharacter, public IAbil
 public:
 	ANotoCharacter(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	//~ACharacter interface
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
-
-protected:
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
 	virtual void UnPossessed() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//~End of ACharacter interface
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+protected:
 
 	void InitializeAbilitySystem();
 	void UninitializeAbilitySystem();

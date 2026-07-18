@@ -22,10 +22,13 @@ public:
 
 	void InitializePlayerInput(UInputComponent* PlayerInputComponent);
 
-protected:
+	//~UActorComponent interface
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	//~End of UActorComponent interface
+
+protected:
 
 	UFUNCTION()
 	void HandlePawnControllerChanged(APawn* Pawn, AController* OldController, AController* NewController);
