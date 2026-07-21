@@ -2,10 +2,14 @@
 
 #include "NotoPlayerPawnComponent.h"
 
+#include "Perception/AISense_Hearing.h"
 #include "Development/NotoGameplayTags.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Input/NotoInputComponent.h"
 #include "Player/NotoPlayerController.h"
+#include "Engine/World.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(NotoPlayerPawnComponent)
 
@@ -14,6 +18,12 @@ UNotoPlayerPawnComponent::UNotoPlayerPawnComponent(const FObjectInitializer& Obj
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
+
+	MovementStates = {
+		{NotoGameplayTags::MovementState_Run, 600.0f, 300.0f, NotoGameplayTags::NoiseTag_Movement},
+		{NotoGameplayTags::MovementState_Sneak, 300.0f, 0.0f, NotoGameplayTags::NoiseTag_Movement}
+	};
+	MovementState = NotoGameplayTags::MovementState_Run;
 }
 
 void UNotoPlayerPawnComponent::BeginPlay()
@@ -25,7 +35,9 @@ void UNotoPlayerPawnComponent::BeginPlay()
 		Pawn->ReceiveControllerChangedDelegate.AddUniqueDynamic(this, &ThisClass::HandlePawnControllerChanged);
 	}
 
-	RefreshTickEnabled();
+	RefreshAimTickEnabled();
+	RefreshMovementNoiseTimer();
+	ApplyMovementState();
 }
 
 void UNotoPlayerPawnComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -33,6 +45,10 @@ void UNotoPlayerPawnComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	if (APawn* Pawn = GetPawn<APawn>())
 	{
 		Pawn->ReceiveControllerChangedDelegate.RemoveDynamic(this, &ThisClass::HandlePawnControllerChanged);
+	}
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(MovementNoiseTimer);
 	}
 
 	Super::EndPlay(EndPlayReason);
@@ -62,8 +78,14 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 		ETriggerEvent::Triggered,
 		this,
 		&ThisClass::Input_Aim);
+	NotoInputComponent->BindNativeAction(
+		DefaultInputConfig,
+		NotoGameplayTags::InputTag_Sneak,
+		ETriggerEvent::Started,
+		this,
+		&ThisClass::Input_ToggleSneak);
 
-	RefreshTickEnabled();
+	RefreshAimTickEnabled();
 }
 
 void UNotoPlayerPawnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -74,13 +96,27 @@ void UNotoPlayerPawnComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 void UNotoPlayerPawnComponent::HandlePawnControllerChanged(APawn* Pawn, AController* OldController, AController* NewController)
 {
-	RefreshTickEnabled();
+	RefreshAimTickEnabled();
+	RefreshMovementNoiseTimer();
 }
 
-void UNotoPlayerPawnComponent::RefreshTickEnabled()
+void UNotoPlayerPawnComponent::RefreshAimTickEnabled()
 {
 	const APawn* Pawn = GetPawn<APawn>();
-	SetComponentTickEnabled(bAimWithMouseCursor && Pawn && Pawn->IsLocallyControlled());
+	SetComponentTickEnabled(Pawn && Pawn->IsLocallyControlled());
+}
+
+void UNotoPlayerPawnComponent::RefreshMovementNoiseTimer()
+{
+	const APawn* Pawn = GetPawn<APawn>();
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(MovementNoiseTimer);
+		if (Pawn && Pawn->IsLocallyControlled() && MovementNoiseInterval > 0.0f)
+		{
+			World->GetTimerManager().SetTimer(MovementNoiseTimer, this, &ThisClass::ReportMovementNoise, MovementNoiseInterval, true);
+		}
+	}
 }
 
 void UNotoPlayerPawnComponent::Input_Move(const FInputActionValue& InputActionValue)
@@ -127,6 +163,22 @@ void UNotoPlayerPawnComponent::Input_Aim(const FInputActionValue& InputActionVal
 	}
 }
 
+void UNotoPlayerPawnComponent::Input_ToggleSneak()
+{
+	SetMovementState(MovementState == NotoGameplayTags::MovementState_Sneak ? NotoGameplayTags::MovementState_Run : NotoGameplayTags::MovementState_Sneak);
+}
+
+void UNotoPlayerPawnComponent::SetMovementState(FGameplayTag NewStateTag)
+{
+	if (MovementState == NewStateTag || !FindMovementStateConfig(NewStateTag))
+	{
+		return;
+	}
+
+	MovementState = NewStateTag;
+	ApplyMovementState();
+}
+
 void UNotoPlayerPawnComponent::UpdateAimFromMouseCursor()
 {
 	APawn* Pawn = GetPawn<APawn>();
@@ -168,4 +220,33 @@ bool UNotoPlayerPawnComponent::GetMouseAimDirection(const APlayerController& Pla
 
 	OutAimDirection = (RayOrigin + RayDirection * IntersectionDistance - PawnLocation).GetSafeNormal2D();
 	return !OutAimDirection.IsNearlyZero();
+}
+
+const FNotoMovementStateConfig* UNotoPlayerPawnComponent::FindMovementStateConfig(FGameplayTag StateTag) const
+{
+	return MovementStates.FindByPredicate([StateTag](const FNotoMovementStateConfig& Config)
+	{
+		return Config.StateTag == StateTag;
+	});
+}
+
+void UNotoPlayerPawnComponent::ApplyMovementState()
+{
+	const FNotoMovementStateConfig* Config = FindMovementStateConfig(MovementState);
+	ACharacter* Character = GetPawn<ACharacter>();
+	if (Config && Character)
+	{
+		Character->GetCharacterMovement()->MaxWalkSpeed = Config->MaxWalkSpeed;
+	}
+}
+
+void UNotoPlayerPawnComponent::ReportMovementNoise()
+{
+	APawn* Pawn = GetPawn<APawn>();
+	const FNotoMovementStateConfig* Config = FindMovementStateConfig(MovementState);
+	if (!Pawn || !Config || Config->NoiseRange <= 0.0f || Pawn->GetVelocity().IsNearlyZero())
+	{
+		return;
+	}
+	UAISense_Hearing::ReportNoiseEvent(GetWorld(), Pawn->GetActorLocation(), 1.0f, Pawn, Config->NoiseRange, Config->NoiseTag.GetTagName());
 }
