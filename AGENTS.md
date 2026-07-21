@@ -28,6 +28,7 @@ Verify behavior in code. When stale documentation is within the task's scope, up
 - Before significant C++ additions or refactors, read `.agents/documents/cpp-style.md`.
 - Before adding a subsystem, module, plugin, replicated system, or cross-feature dependency, read `.agents/documents/architecture.md`.
 - The two supporting documents are not required for trivial Markdown-only edits.
+- Do not replace an authored Blueprint or asset change with a C++ workaround. If completing a task requires creating or editing a Blueprint, input asset, mapping context, Data Asset, map, or other authored content and the intended edit cannot be made reliably, stop and ask the user to make it or grant explicit direction. State the exact asset and change required.
 
 ## Validation
 
