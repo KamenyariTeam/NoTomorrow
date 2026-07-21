@@ -5,6 +5,7 @@
 #include "Development/NotoGameplayTags.h"
 #include "GameFramework/PlayerController.h"
 #include "Input/NotoInputComponent.h"
+#include "Player/NotoPlayerController.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(NotoPlayerPawnComponent)
 
@@ -55,6 +56,12 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 		ETriggerEvent::Triggered,
 		this,
 		&ThisClass::Input_Move);
+	NotoInputComponent->BindNativeAction(
+		DefaultInputConfig,
+		NotoGameplayTags::InputTag_Aim,
+		ETriggerEvent::Triggered,
+		this,
+		&ThisClass::Input_Aim);
 
 	RefreshTickEnabled();
 }
@@ -99,11 +106,32 @@ void UNotoPlayerPawnComponent::Input_Move(const FInputActionValue& InputActionVa
 	}
 }
 
+void UNotoPlayerPawnComponent::Input_Aim(const FInputActionValue& InputActionValue)
+{
+	APawn* Pawn = GetPawn<APawn>();
+	ANotoPlayerController* PlayerController = Pawn ? Cast<ANotoPlayerController>(Pawn->GetController()) : nullptr;
+	if (!PlayerController || !PlayerController->IsUsingGamepad())
+	{
+		return;
+	}
+
+	const FVector2D Value = InputActionValue.Get<FVector2D>();
+	const FRotator AimRotation(0.0f, PlayerController->GetControlRotation().Yaw, 0.0f);
+	const FVector AimDirection = AimRotation.RotateVector(FVector(Value.Y, Value.X, 0.0f)).GetSafeNormal2D();
+	Pawn->SetActorRotation(AimDirection.Rotation());
+
+	FVector2D CrosshairPosition;
+	if (PlayerController->ProjectWorldLocationToScreen(Pawn->GetActorLocation() + AimDirection * GamepadAimRadius, CrosshairPosition, true))
+	{
+		PlayerController->SetGameplayReticlePosition(CrosshairPosition);
+	}
+}
+
 void UNotoPlayerPawnComponent::UpdateAimFromMouseCursor()
 {
 	APawn* Pawn = GetPawn<APawn>();
-	const APlayerController* PlayerController = Pawn ? Cast<APlayerController>(Pawn->GetController()) : nullptr;
-	if (!PlayerController || !PlayerController->ShouldShowMouseCursor())
+	ANotoPlayerController* PlayerController = Pawn ? Cast<ANotoPlayerController>(Pawn->GetController()) : nullptr;
+	if (!PlayerController || PlayerController->IsUsingGamepad())
 	{
 		return;
 	}
@@ -112,6 +140,13 @@ void UNotoPlayerPawnComponent::UpdateAimFromMouseCursor()
 	if (GetMouseAimDirection(*PlayerController, *Pawn, AimDirection))
 	{
 		Pawn->SetActorRotation(AimDirection.Rotation());
+	}
+
+	float MouseX;
+	float MouseY;
+	if (PlayerController->GetMousePosition(MouseX, MouseY))
+	{
+		PlayerController->SetGameplayReticlePosition(FVector2D(MouseX, MouseY));
 	}
 }
 

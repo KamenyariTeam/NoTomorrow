@@ -15,9 +15,9 @@ This document records the current foundation and its intended boundaries.
 
 - `ANotoGameMode` selects `ANotoCharacter`, `ANotoPlayerController`, `ANotoPlayerState`, and `AModularGameStateBase`. Concrete Blueprint defaults may specialize the pawn and other presentation data.
 - `ANotoCharacter::SetupPlayerInputComponent` hands input setup to `UNotoPlayerPawnComponent`.
-- `UNotoPlayerPawnComponent` owns local movement bindings and cursor aiming. `UNotoInputConfig` maps semantic gameplay tags to authored input actions; the default mapping context is installed by Enhanced Input developer settings.
+- `UNotoPlayerPawnComponent` owns local movement bindings and computes aim from the active input method. `ANotoPlayerController` owns the per-player gameplay reticle, Common Input method switching, and the boundary used by weapons and UI to replace or hide the reticle. `UNotoInputConfig` maps semantic gameplay tags to authored input actions; the default mapping context is installed by Enhanced Input developer settings.
 - `ANotoPlayerState` owns the player's single replicated Ability System Component. `ANotoCharacter` implements `IAbilitySystemInterface` as the current avatar and initializes actor info on server possession and client PlayerState replication.
-- Software cursors are configured through `UUserInterfaceSettings` rather than custom activation actions.
+- Gameplay reticles are viewport widgets independent from software cursors. Software cursors remain configured through `UUserInterfaceSettings` for menus and other pointer-driven UI.
 - Stock Unreal Engine, AssetManager, GameInstance, WorldSettings, and HUD behavior is used until game-specific behavior creates a real subclass requirement.
 
 ### Content ownership

@@ -35,6 +35,7 @@ protected:
 
 	void RefreshTickEnabled();
 	void Input_Move(const FInputActionValue& InputActionValue);
+	void Input_Aim(const FInputActionValue& InputActionValue);
 	void UpdateAimFromMouseCursor();
 	bool GetMouseAimDirection(const APlayerController& PlayerController, const APawn& Pawn, FVector& OutAimDirection) const;
 
@@ -43,4 +44,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Input|Mouse")
 	bool bAimWithMouseCursor = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Input|Gamepad", Meta = (ClampMin = "0.0", Units = "cm"))
+	float GamepadAimRadius = 300.0f;
 };

@@ -23,6 +23,6 @@ public class NoTomorrowGame : ModuleRules
 			"GameplayTasks"
 		]);
 
-		PrivateDependencyModuleNames.AddRange(["GameplayCameras"]);
+		PrivateDependencyModuleNames.AddRange(["CommonInput", "GameplayCameras", "UMG"]);
 	}
 }
