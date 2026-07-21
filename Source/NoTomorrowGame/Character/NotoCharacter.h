@@ -8,6 +8,8 @@
 
 class UInputComponent;
 class UGameplayCameraComponent;
+class UNotoInteractionComponent;
+class UNotoPlayerPawnComponent;
 
 /** Player avatar used by No Tomorrow. */
 UCLASS(Config = Game, BlueprintType)
@@ -35,4 +37,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UGameplayCameraComponent> GameplayCameraComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Interaction", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoInteractionComponent> InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoPlayerPawnComponent> PlayerPawnComponent;
 };

@@ -6,6 +6,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/GameplayCameraComponent.h"
 #include "NotoPlayerPawnComponent.h"
+#include "Interaction/NotoInteractionComponent.h"
 #include "Player/NotoPlayerState.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
@@ -28,6 +29,9 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	GameplayCameraComponent->SetupAttachment(RootComponent);
 	GameplayCameraComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 
+	InteractionComponent = CreateDefaultSubobject<UNotoInteractionComponent>(TEXT("InteractionComponent"));
+	PlayerPawnComponent = CreateDefaultSubobject<UNotoPlayerPawnComponent>(TEXT("PlayerPawnComponent"));
+
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
@@ -46,7 +50,7 @@ void ANotoCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	if (UNotoPlayerPawnComponent* PlayerPawnComponent = FindComponentByClass<UNotoPlayerPawnComponent>())
+	if (PlayerPawnComponent)
 	{
 		PlayerPawnComponent->InitializePlayerInput(PlayerInputComponent);
 	}

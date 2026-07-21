@@ -102,6 +102,17 @@ void ANotoPlayerController::SetGameplayReticlePosition(const FVector2D& ScreenPo
 	EnsureGameplayReticle();
 }
 
+bool ANotoPlayerController::GetGameplayReticlePosition(FVector2D& OutScreenPosition) const
+{
+	if (!bHasGameplayReticlePosition)
+	{
+		return false;
+	}
+
+	OutScreenPosition = GameplayReticlePosition;
+	return true;
+}
+
 bool ANotoPlayerController::IsUsingGamepad() const
 {
 	const UCommonInputSubsystem* InputSubsystem = UCommonInputSubsystem::Get(GetLocalPlayer());

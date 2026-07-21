@@ -8,6 +8,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Input/NotoInputComponent.h"
+#include "Interaction/NotoInteractionComponent.h"
 #include "Player/NotoPlayerController.h"
 #include "Engine/World.h"
 
@@ -84,6 +85,12 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 		ETriggerEvent::Started,
 		this,
 		&ThisClass::Input_ToggleSneak);
+	NotoInputComponent->BindNativeAction(
+		DefaultInputConfig,
+		NotoGameplayTags::InputTag_Interact,
+		ETriggerEvent::Started,
+		this,
+		&ThisClass::Input_Interact);
 
 	RefreshAimTickEnabled();
 }
@@ -166,6 +173,17 @@ void UNotoPlayerPawnComponent::Input_Aim(const FInputActionValue& InputActionVal
 void UNotoPlayerPawnComponent::Input_ToggleSneak()
 {
 	SetMovementState(MovementState == NotoGameplayTags::MovementState_Sneak ? NotoGameplayTags::MovementState_Run : NotoGameplayTags::MovementState_Sneak);
+}
+
+void UNotoPlayerPawnComponent::Input_Interact()
+{
+	if (APawn* Pawn = GetPawn<APawn>())
+	{
+		if (UNotoInteractionComponent* InteractionComponent = Pawn->FindComponentByClass<UNotoInteractionComponent>())
+		{
+			InteractionComponent->TryInteract();
+		}
+	}
 }
 
 void UNotoPlayerPawnComponent::SetMovementState(FGameplayTag NewStateTag)

@@ -6,12 +6,18 @@ The project currently concentrates on a small, durable gameplay foundation. Heis
 
 ## Current technical foundation
 
-- `NoTomorrowGame`: the single project runtime module, containing the modular game framework classes, a PlayerState-owned Gameplay Ability System, semantic Enhanced Input bindings, cursor aiming, gameplay tags, and Gameplay Cameras integration.
+- `NoTomorrowGame`: the single project runtime module, containing the modular game framework classes, a PlayerState-owned Gameplay Ability System, semantic Enhanced Input bindings, cursor aiming, nearby cursor-selected interactions, gameplay tags, and Gameplay Cameras integration.
 - `Plugins/ModularGameplayActors`: reusable modular actor, pawn, character, controller, GameMode, and GameState bases aligned with Epic's Modular Gameplay actors.
 - Native Unreal configuration installs the default input mapping context and software cursor; concrete pawn, game-mode, input, camera, cursor, and map data lives in project assets.
 - Common UI, Game Features, Modular Gameplay, Gameplay Abilities, Enhanced Input, Gameplay Tags, and Gameplay Cameras remain enabled engine integrations. Game Features are available for features that eventually need independent activation, not ordinary project composition.
 
 C++ owns engine-facing foundations and lifecycle behavior. Blueprints and data assets configure concrete game classes and authored data.
+
+## Interaction setup
+
+`ANotoCharacter` owns the local interaction range. It selects an `INotoInteractable` inside that range by its screen distance to the gameplay cursor, marks it through `SetInteractionHighlighted`, and calls `Interact` only on that selected target. Derive doors, loot, pickups, and other world objects from `ANotoInteractableActor` (or implement `INotoInteractable`) and use the actor's query-only `InteractionVolume` for range detection.
+
+To enable input, create `IA_Interact`, add it to `IMC_Player_Default`, and add it to `DA_InputConfig_Player` with `InputTag.Interact`. Place `ANotoTestPickup` in a level to verify the path; it writes custom depth and destroys itself when interacted with. A post-process material that renders Custom Depth as a white outline is required for the visible outline.
 
 ## Requirements
 

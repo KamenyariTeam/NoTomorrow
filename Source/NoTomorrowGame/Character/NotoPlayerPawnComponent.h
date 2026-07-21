@@ -11,6 +11,7 @@ class AController;
 class APlayerController;
 class UInputComponent;
 class UNotoInputConfig;
+class UNotoInteractionComponent;
 struct FInputActionValue;
 
 /** Authored behavior for one movement state. Add states here instead of adding state-specific movement code. */
@@ -65,6 +66,7 @@ protected:
 	void Input_Move(const FInputActionValue& InputActionValue);
 	void Input_Aim(const FInputActionValue& InputActionValue);
 	void Input_ToggleSneak();
+	void Input_Interact();
 	void UpdateAimFromMouseCursor();
 	bool GetMouseAimDirection(const APlayerController& PlayerController, const APawn& Pawn, FVector& OutAimDirection) const;
 	const FNotoMovementStateConfig* FindMovementStateConfig(FGameplayTag StateTag) const;

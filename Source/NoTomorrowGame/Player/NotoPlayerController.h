@@ -28,6 +28,7 @@ public:
 	void SetGameplayReticleVisible(bool bVisible);
 
 	void SetGameplayReticlePosition(const FVector2D& ScreenPosition);
+	bool GetGameplayReticlePosition(FVector2D& OutScreenPosition) const;
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Input")
 	bool IsUsingGamepad() const;
