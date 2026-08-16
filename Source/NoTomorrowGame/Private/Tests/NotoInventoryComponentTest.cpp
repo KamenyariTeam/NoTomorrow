@@ -313,6 +313,48 @@ bool FNotoInventoryCollectionPlanningTest::RunTest(const FString& Parameters)
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FNotoInventoryActiveSlotPreservationTest,
+	"NoTomorrow.Inventory.ActiveSlotPreservation",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FNotoInventoryActiveSlotPreservationTest::RunTest(const FString& Parameters)
+{
+	using namespace NotoInventoryTests;
+
+	FTestWorld TestWorld;
+	UNotoItemDefinition* MainWeapon = MakeDefinition(TEXT("ActivePreservationMain"), ENotoItemType::MainWeapon);
+	UNotoItemDefinition* SecondaryWeapon = MakeDefinition(
+		TEXT("ActivePreservationSecondary"), ENotoItemType::SecondaryWeapon, 1, true, 6);
+	UNotoItemDefinition* ReplacementSecondary = MakeDefinition(
+		TEXT("ActivePreservationReplacement"), ENotoItemType::SecondaryWeapon);
+	Collect(*TestWorld.Inventory, *MainWeapon);
+
+	FGuid SecondaryItemId;
+	TestTrue(TEXT("Initial secondary collection succeeds"), TestWorld.Inventory->CollectItem(
+		SecondaryWeapon, 1, 2, SecondaryItemId));
+	TestTrue(TEXT("Main weapon can become active"), TestWorld.Inventory->SetActiveSlot(ENotoEquipmentSlot::MainWeapon));
+
+	FGuid RefilledSecondaryItemId;
+	TestTrue(TEXT("Secondary ammo refill succeeds without activating it"), TestWorld.Inventory->CollectItem(
+		SecondaryWeapon, 1, 1, RefilledSecondaryItemId, false));
+	TestEqual(TEXT("Ammo refill returns the equipped secondary"), RefilledSecondaryItemId, SecondaryItemId);
+	TestEqual(TEXT("Ammo refill preserves the main active slot"), TestWorld.Inventory->GetActiveSlot(),
+	          ENotoEquipmentSlot::MainWeapon);
+
+	FGuid ReplacementItemId;
+	TestTrue(TEXT("Secondary replacement succeeds without activating it"), TestWorld.Inventory->CollectItem(
+		ReplacementSecondary, 1, -1, ReplacementItemId, false));
+	FNotoItemInstance EquippedSecondary;
+	TestTrue(TEXT("Replacement secondary is equipped"), TestWorld.Inventory->GetEquippedItem(
+		         ENotoEquipmentSlot::SecondaryWeapon, EquippedSecondary));
+	TestEqual(TEXT("Replacement secondary is the collected item"), EquippedSecondary.InstanceId, ReplacementItemId);
+	TestEqual(TEXT("Secondary replacement preserves the main active slot"), TestWorld.Inventory->GetActiveSlot(),
+	          ENotoEquipmentSlot::MainWeapon);
+	TestEqual(TEXT("Replacing the secondary drops the old one"), TestWorld.CountPickups(), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
 	FNotoInventoryToolReplacementTest,
 	"NoTomorrow.Inventory.ToolReplacement",
 	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -527,7 +569,7 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	TestTrue(
 		TEXT("Pickup CanInteract agrees with successful collection"),
 		SuccessPickup->CanInteract_Implementation(SuccessWorld.Pawn));
-	SuccessPickup->Interact_Implementation(SuccessWorld.Pawn);
+	SuccessPickup->Interact_Implementation(SuccessWorld.Pawn, FNotoInteractionRequest());
 	TestTrue(TEXT("Successful pickup interaction destroys the pickup"), SuccessPickup->IsActorBeingDestroyed());
 	TestEqual(TEXT("Successful pickup transfers its item"), SuccessWorld.Inventory->GetTotalQuantity(SuccessItem), 1);
 
@@ -542,7 +584,7 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	TestTrue(
 		TEXT("Partially loaded matching weapon can interact"),
 		DuplicateWeaponPickup->CanInteract_Implementation(DuplicateWeaponWorld.Pawn));
-	DuplicateWeaponPickup->Interact_Implementation(DuplicateWeaponWorld.Pawn);
+	DuplicateWeaponPickup->Interact_Implementation(DuplicateWeaponWorld.Pawn, FNotoInteractionRequest());
 	FNotoItemInstance RefilledWeapon;
 	TestTrue(
 		TEXT("Matching weapon remains equipped after ammo transfer"),
@@ -568,7 +610,7 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	TestFalse(
 		TEXT("Full matching weapon cannot interact with another duplicate"),
 		FullWeaponPickup->CanInteract_Implementation(DuplicateWeaponWorld.Pawn));
-	FullWeaponPickup->Interact_Implementation(DuplicateWeaponWorld.Pawn);
+	FullWeaponPickup->Interact_Implementation(DuplicateWeaponWorld.Pawn, FNotoInteractionRequest());
 	TestFalse(
 		TEXT("Full matching weapon leaves the duplicate pickup in the world"),
 		FullWeaponPickup->IsActorBeingDestroyed());
@@ -596,7 +638,7 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	TestFalse(
 		TEXT("CollectItem agrees with blocked pickup"),
 		FailureWorld.Inventory->CollectItem(FailureItem, 1, -1, FailedItemId));
-	FailurePickup->Interact_Implementation(FailureWorld.Pawn);
+	FailurePickup->Interact_Implementation(FailureWorld.Pawn, FNotoInteractionRequest());
 	TestFalse(TEXT("Failed pickup remains in the world"), FailurePickup->IsActorBeingDestroyed());
 	TestEqual(TEXT("Failed pickup does not mutate inventory"), FailureWorld.Inventory->GetTotalQuantity(FailureItem),
 	          0);

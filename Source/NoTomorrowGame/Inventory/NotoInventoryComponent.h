@@ -27,7 +27,7 @@ public:
 
 	/** Adds an item and equips weapon/tool pickups. Duplicate magazine weapons transfer their loaded rounds instead. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
-	bool CollectItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId);
+	bool CollectItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId, bool bMakeCollectedItemActive = true);
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
 	bool CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo) const;
@@ -109,10 +109,8 @@ private:
 		UNotoInventoryComponent& Inventory;
 	};
 
-	bool AddItemInternal(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo,
-	                     FGuid PreferredItemInstanceId, FGuid& OutItemInstanceId);
-	bool BuildCollectionPlan(const UNotoItemDefinition& Definition, int32 Quantity, int32 LoadedAmmo,
-	                         FCollectionPlan& OutPlan) const;
+	bool AddItemInternal(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid PreferredItemInstanceId, FGuid& OutItemInstanceId);
+	bool BuildCollectionPlan(const UNotoItemDefinition& Definition, int32 Quantity, int32 LoadedAmmo, FCollectionPlan& OutPlan) const;
 	static int32 ResolveLoadedAmmo(const UNotoItemDefinition& Definition, int32 LoadedAmmo);
 	bool CanDropItem(FGuid ItemInstanceId, int32 Quantity) const;
 	bool IsEquipmentItem(const UNotoItemDefinition& Definition) const;
@@ -127,16 +125,13 @@ private:
 	void MarkEquipmentDirty();
 	void FlushMutationNotifications();
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, SaveGame, Category = "Noto|Inventory",
-		Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, SaveGame, Category = "Noto|Inventory", Meta = (AllowPrivateAccess = "true"))
 	TArray<FNotoItemInstance> Items;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, SaveGame, Category = "Noto|Inventory",
-		Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, SaveGame, Category = "Noto|Inventory", Meta = (AllowPrivateAccess = "true"))
 	TArray<FNotoEquippedItem> Equipment;
 
-	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, SaveGame, Category = "Noto|Inventory",
-		Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, SaveGame, Category = "Noto|Inventory", Meta = (AllowPrivateAccess = "true"))
 	ENotoEquipmentSlot ActiveSlot = ENotoEquipmentSlot::None;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Noto|Inventory")

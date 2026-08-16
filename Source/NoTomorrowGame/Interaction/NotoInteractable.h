@@ -7,6 +7,16 @@
 
 class APawn;
 
+/** Per-input request data passed to an interactable. Unused fields are ignored by interactables that do not need them. */
+USTRUCT(BlueprintType)
+struct FNotoInteractionRequest
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Noto|Interaction")
+	bool bUseAlternateInteraction = false;
+};
+
 /** Contract used by the player interaction selector. */
 UINTERFACE(BlueprintType)
 class UNotoInteractable : public UInterface
@@ -23,7 +33,7 @@ public:
 	bool CanInteract(APawn* Interactor) const;
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Noto|Interaction")
-	void Interact(APawn* Interactor);
+	void Interact(APawn* Interactor, const FNotoInteractionRequest& Request);
 
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Noto|Interaction")
 	void SetInteractionHighlighted(bool bHighlighted);

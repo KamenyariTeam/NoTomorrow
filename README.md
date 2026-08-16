@@ -17,7 +17,7 @@ C++ owns engine-facing foundations and lifecycle behavior. Blueprints and data a
 
 `ANotoCharacter` owns the local interaction range. It selects an `INotoInteractable` inside that range by its screen distance to the gameplay cursor, marks it through `SetInteractionHighlighted`, and calls `Interact` only on that selected target. Derive doors, loot, pickups, and other world objects from `ANotoInteractableActor` (or implement `INotoInteractable`) and use the actor's query-only `InteractionVolume` for range detection.
 
-To enable input, create `IA_Interact`, add it to `IMC_Player_Default`, and add it to `DA_InputConfig_Player` with `InputTag.Interact`. Place `ANotoTestPickup` in a level to verify the path; it writes custom depth and destroys itself when interacted with. A post-process material that renders Custom Depth as a white outline is required for the visible outline.
+`IA_Interact`, `IA_InteractModified`, and `IA_Drop` are registered in `DA_InputConfig_Player`; `IA_Drop` is mapped to `R` in `IMC_Player_Default`. The interaction modifier uses Enhanced Input chord actions and initially maps to Alt. Pickup always uses the normal equipment collection rules; the modified interaction preserves the current active slot. `UNotoPlayerPawnComponent::SetPickupActiveSlotModifierReversed` is ready for a future user setting that reverses that behavior. Place `ANotoTestPickup` in a level to verify the path; it writes custom depth and destroys itself when interacted with. A post-process material that renders Custom Depth as a white outline is required for the visible outline.
 
 ### Inventory debugging
 

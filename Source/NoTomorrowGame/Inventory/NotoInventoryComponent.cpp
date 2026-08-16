@@ -117,7 +117,8 @@ bool UNotoInventoryComponent::CollectItem(
 	UNotoItemDefinition* Definition,
 	int32 Quantity,
 	int32 LoadedAmmo,
-	FGuid& OutItemInstanceId)
+	FGuid& OutItemInstanceId,
+	bool bMakeCollectedItemActive)
 {
 	OutItemInstanceId.Invalidate();
 	FCollectionPlan Plan;
@@ -127,6 +128,7 @@ bool UNotoInventoryComponent::CollectItem(
 	}
 
 	FScopedMutation Mutation(*this);
+	const ENotoEquipmentSlot PreviousActiveSlot = ActiveSlot;
 	if (Plan.Action == ECollectionAction::TransferWeaponAmmo)
 	{
 		FNotoItemInstance* EquippedWeapon = FindItem(Plan.PreferredItemInstanceId);
@@ -138,7 +140,7 @@ bool UNotoInventoryComponent::CollectItem(
 			EquippedWeapon->LoadedAmmo + ResolveLoadedAmmo(*Definition, LoadedAmmo),
 			Definition->GetMagazineCapacity());
 		MarkInventoryDirty();
-		return SetActiveSlot(Plan.Slot);
+		return !bMakeCollectedItemActive || SetActiveSlot(Plan.Slot);
 	}
 
 	if (Plan.Action == ECollectionAction::Replace)
@@ -159,10 +161,16 @@ bool UNotoInventoryComponent::CollectItem(
 	{
 	case ECollectionAction::FillEquippedStack:
 		check(OutItemInstanceId == Plan.PreferredItemInstanceId);
-		return SetActiveSlot(Plan.Slot);
+		return !bMakeCollectedItemActive || SetActiveSlot(Plan.Slot);
 	case ECollectionAction::Equip:
 	case ECollectionAction::Replace:
-		return EquipItem(OutItemInstanceId, Plan.Slot, false);
+	{
+		if (!EquipItem(OutItemInstanceId, Plan.Slot, false))
+		{
+			return false;
+		}
+		return bMakeCollectedItemActive || SetActiveSlot(PreviousActiveSlot);
+	}
 	case ECollectionAction::AddOnly:
 	default:
 		return true;
@@ -599,8 +607,7 @@ bool UNotoInventoryComponent::TryGetDefaultDropTransform(FTransform& OutDropTran
 		return false;
 	}
 
-	OutDropTransform = FTransform(Pawn->GetActorRotation(),
-	                              Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * 100.0f);
+	OutDropTransform = FTransform(Pawn->GetActorRotation(), Pawn->GetActorLocation() + Pawn->GetActorForwardVector() * 100.0f);
 	return true;
 }
 

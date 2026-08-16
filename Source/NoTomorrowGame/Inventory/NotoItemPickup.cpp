@@ -23,18 +23,36 @@ bool ANotoItemPickup::CanInteract_Implementation(APawn* Interactor) const
 {
 	const ANotoPlayerState* PlayerState = Interactor ? Interactor->GetPlayerState<ANotoPlayerState>() : nullptr;
 	const UNotoInventoryComponent* Inventory = PlayerState ? PlayerState->GetInventoryComponent() : nullptr;
-	return Inventory && Inventory->CanCollectItem(ItemDefinition, Quantity, LoadedAmmo);
+	if (!Inventory)
+	{
+		return false;
+	}
+
+	return Inventory->CanCollectItem(ItemDefinition, Quantity, LoadedAmmo);
 }
 
-void ANotoItemPickup::Interact_Implementation(APawn* Interactor)
+void ANotoItemPickup::Interact_Implementation(APawn* Interactor, const FNotoInteractionRequest& Request)
+{
+	TryPickUp(Interactor, !Request.bUseAlternateInteraction);
+}
+
+bool ANotoItemPickup::TryPickUp(APawn* Interactor, bool bMakeCollectedItemActive)
 {
 	ANotoPlayerState* PlayerState = Interactor ? Interactor->GetPlayerState<ANotoPlayerState>() : nullptr;
 	UNotoInventoryComponent* Inventory = PlayerState ? PlayerState->GetInventoryComponent() : nullptr;
+	if (!Inventory)
+	{
+		return false;
+	}
+
 	FGuid ItemInstanceId;
-	if (Inventory && Inventory->CollectItem(ItemDefinition, Quantity, LoadedAmmo, ItemInstanceId))
+	const bool bCollected = Inventory->CollectItem(ItemDefinition, Quantity, LoadedAmmo, ItemInstanceId, bMakeCollectedItemActive);
+	if (bCollected)
 	{
 		Destroy();
+		return true;
 	}
+	return false;
 }
 
 void ANotoItemPickup::InitializePickup(UNotoItemDefinition* InDefinition, int32 InQuantity, int32 InLoadedAmmo)

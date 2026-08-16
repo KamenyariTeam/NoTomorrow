@@ -18,11 +18,12 @@ public:
 
 	virtual void OnConstruction(const FTransform& Transform) override;
 	virtual bool CanInteract_Implementation(APawn* Interactor) const override;
-	virtual void Interact_Implementation(APawn* Interactor) override;
+	virtual void Interact_Implementation(APawn* Interactor, const FNotoInteractionRequest& Request) override;
 
 	void InitializePickup(UNotoItemDefinition* InDefinition, int32 InQuantity, int32 InLoadedAmmo);
 
 private:
+	bool TryPickUp(APawn* Interactor, bool bMakeCollectedItemActive);
 	void RefreshVisual();
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Noto|Inventory", Meta = (AllowPrivateAccess = "true"))

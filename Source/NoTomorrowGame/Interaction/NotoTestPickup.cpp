@@ -16,7 +16,7 @@ ANotoTestPickup::ANotoTestPickup()
 	}
 }
 
-void ANotoTestPickup::Interact_Implementation(APawn* Interactor)
+void ANotoTestPickup::Interact_Implementation(APawn* Interactor, const FNotoInteractionRequest& Request)
 {
 	Destroy();
 }
