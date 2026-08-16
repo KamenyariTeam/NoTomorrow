@@ -25,9 +25,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
 	bool AddItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId);
 
-	/** Adds an item and equips weapon/tool pickups. Duplicate magazine weapons transfer their loaded rounds instead. */
+	/** Adds an item and equips weapon/tool pickups. Duplicate magazine weapons transfer rounds that fit. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
-	bool CollectItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId, bool bMakeCollectedItemActive = true);
+	bool CollectItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId,
+	                 int32& OutRemainingLoadedAmmo, bool bMakeCollectedItemActive = true);
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
 	bool CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo) const;
@@ -76,6 +77,9 @@ public:
 
 	const TArray<FNotoItemInstance>& GetItemsView() const { return Items; }
 	const TArray<FNotoEquippedItem>& GetEquipmentView() const { return Equipment; }
+
+	/** Resolves transient definition pointers after saved state has been deserialized. */
+	bool ResolveItemDefinitions();
 
 	UPROPERTY(BlueprintAssignable, Category = "Noto|Inventory")
 	FNotoInventoryChanged OnInventoryChanged;

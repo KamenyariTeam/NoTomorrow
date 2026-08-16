@@ -72,15 +72,17 @@
 		},
 		{
 			"Name": "ModelContextProtocol",
-			"Enabled": true
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
 		},
 		{
 			"Name": "EditorToolset",
-			"Enabled": true
-		},
-		{
-			"Name": "FunctionalTestingEditor",
-			"Enabled": true
+			"Enabled": true,
+			"TargetAllowList": [
+				"Editor"
+			]
 		}
 	],
 	"TargetPlatforms": [

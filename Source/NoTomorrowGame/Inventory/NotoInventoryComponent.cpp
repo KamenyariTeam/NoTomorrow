@@ -2,6 +2,7 @@
 
 #include "Inventory/NotoInventoryComponent.h"
 
+#include "Engine/AssetManager.h"
 #include "Engine/World.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerState.h"
@@ -118,9 +119,11 @@ bool UNotoInventoryComponent::CollectItem(
 	int32 Quantity,
 	int32 LoadedAmmo,
 	FGuid& OutItemInstanceId,
+	int32& OutRemainingLoadedAmmo,
 	bool bMakeCollectedItemActive)
 {
 	OutItemInstanceId.Invalidate();
+	OutRemainingLoadedAmmo = 0;
 	FCollectionPlan Plan;
 	if (!Definition || !BuildCollectionPlan(*Definition, Quantity, LoadedAmmo, Plan))
 	{
@@ -136,9 +139,13 @@ bool UNotoInventoryComponent::CollectItem(
 			UsesMagazine());
 
 		OutItemInstanceId = EquippedWeapon->InstanceId;
-		EquippedWeapon->LoadedAmmo = FMath::Min(
-			EquippedWeapon->LoadedAmmo + ResolveLoadedAmmo(*Definition, LoadedAmmo),
-			Definition->GetMagazineCapacity());
+		const int32 IncomingLoadedAmmo = ResolveLoadedAmmo(*Definition, LoadedAmmo);
+		const int32 TransferredAmmo = FMath::Min(
+			IncomingLoadedAmmo,
+			Definition->GetMagazineCapacity() - EquippedWeapon->LoadedAmmo);
+		check(TransferredAmmo > 0);
+		EquippedWeapon->LoadedAmmo += TransferredAmmo;
+		OutRemainingLoadedAmmo = IncomingLoadedAmmo - TransferredAmmo;
 		MarkInventoryDirty();
 		return !bMakeCollectedItemActive || SetActiveSlot(Plan.Slot);
 	}
@@ -164,13 +171,13 @@ bool UNotoInventoryComponent::CollectItem(
 		return !bMakeCollectedItemActive || SetActiveSlot(Plan.Slot);
 	case ECollectionAction::Equip:
 	case ECollectionAction::Replace:
-	{
-		if (!EquipItem(OutItemInstanceId, Plan.Slot, false))
 		{
-			return false;
+			if (!EquipItem(OutItemInstanceId, Plan.Slot, false))
+			{
+				return false;
+			}
+			return bMakeCollectedItemActive || SetActiveSlot(PreviousActiveSlot);
 		}
-		return bMakeCollectedItemActive || SetActiveSlot(PreviousActiveSlot);
-	}
 	case ECollectionAction::AddOnly:
 	default:
 		return true;
@@ -542,6 +549,50 @@ bool UNotoInventoryComponent::HasItemWithTag(FGameplayTag ItemTag, int32 Minimum
 		}
 	}
 	return false;
+}
+
+bool UNotoInventoryComponent::ResolveItemDefinitions()
+{
+	FScopedMutation Mutation(*this);
+	UAssetManager& AssetManager = UAssetManager::Get();
+	bool bAllResolved = true;
+	bool bAnyDefinitionChanged = false;
+
+	for (FNotoItemInstance& Item : Items)
+	{
+		if (Item.Definition && Item.Definition->GetPrimaryAssetId() == Item.DefinitionId)
+		{
+			continue;
+		}
+
+		UNotoItemDefinition* ResolvedDefinition = Cast<UNotoItemDefinition>(
+			AssetManager.GetPrimaryAssetObject(Item.DefinitionId));
+		if (!ResolvedDefinition)
+		{
+			const FSoftObjectPath DefinitionPath = AssetManager.GetPrimaryAssetPath(Item.DefinitionId);
+			ResolvedDefinition = Cast<UNotoItemDefinition>(DefinitionPath.TryLoad());
+		}
+
+		if (!ResolvedDefinition || ResolvedDefinition->GetPrimaryAssetId() != Item.DefinitionId)
+		{
+			bAllResolved = false;
+			if (Item.Definition)
+			{
+				Item.Definition = nullptr;
+				bAnyDefinitionChanged = true;
+			}
+			continue;
+		}
+
+		Item.Definition = ResolvedDefinition;
+		bAnyDefinitionChanged = true;
+	}
+
+	if (bAnyDefinitionChanged)
+	{
+		MarkInventoryDirty();
+	}
+	return bAllResolved;
 }
 
 bool UNotoInventoryComponent::IsEquipmentItem(const UNotoItemDefinition& Definition) const

@@ -46,9 +46,22 @@ bool ANotoItemPickup::TryPickUp(APawn* Interactor, bool bMakeCollectedItemActive
 	}
 
 	FGuid ItemInstanceId;
-	const bool bCollected = Inventory->CollectItem(ItemDefinition, Quantity, LoadedAmmo, ItemInstanceId, bMakeCollectedItemActive);
+	int32 RemainingLoadedAmmo = 0;
+	const bool bCollected = Inventory->CollectItem(
+		ItemDefinition,
+		Quantity,
+		LoadedAmmo,
+		ItemInstanceId,
+		RemainingLoadedAmmo,
+		bMakeCollectedItemActive);
 	if (bCollected)
 	{
+		if (RemainingLoadedAmmo > 0)
+		{
+			LoadedAmmo = RemainingLoadedAmmo;
+			return true;
+		}
+
 		Destroy();
 		return true;
 	}

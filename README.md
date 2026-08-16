@@ -31,7 +31,7 @@ NotoInventoryDropActive 1
 NotoInventorySetActiveSlot 7
 ```
 
-`NotoInventoryGive` takes an item-definition path and optional quantity and loaded-ammo values. Magazine weapons carry their own ammo; picking up a matching weapon refills it. `NotoInventorySetActiveSlot` uses `0`–`7` (`0` none, `1` main weapon, `2` secondary weapon, `3`–`7` tools).
+`NotoInventoryGive` takes an item-definition path and optional quantity and loaded-ammo values. Weapons carry their loaded ammo directly; picking up a matching weapon transfers only the rounds that fit and leaves any remainder in the pickup. `NotoInventorySetActiveSlot` uses `0`–`7` (`0` none, `1` main weapon, `2` secondary weapon, `3`–`7` tools).
 
 ## Requirements
 

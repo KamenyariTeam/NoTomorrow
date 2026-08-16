@@ -69,6 +69,14 @@ namespace NotoInventoryTests
 		reinterpret_cast<FNotoItemInstance*>(Items.GetRawPtr(0))->Quantity = Quantity;
 	}
 
+	void ClearFirstItemDefinition(UNotoInventoryComponent& Inventory)
+	{
+		FArrayProperty* ItemsProperty = FindPropertyChecked<FArrayProperty>(Inventory.GetClass(), TEXT("Items"));
+		FScriptArrayHelper Items(ItemsProperty, ItemsProperty->ContainerPtrToValuePtr<void>(&Inventory));
+		check(Items.Num() > 0);
+		reinterpret_cast<FNotoItemInstance*>(Items.GetRawPtr(0))->Definition = nullptr;
+	}
+
 	struct FTestWorld
 	{
 		explicit FTestWorld(bool bCreatePawn = true)
@@ -131,10 +139,34 @@ namespace NotoInventoryTests
 		return ItemInstanceId;
 	}
 
+	bool TryCollect(
+		UNotoInventoryComponent& Inventory,
+		UNotoItemDefinition* Definition,
+		int32 Quantity,
+		int32 LoadedAmmo,
+		FGuid& OutItemInstanceId,
+		bool bMakeCollectedItemActive = true,
+		int32* OutRemainingLoadedAmmo = nullptr)
+	{
+		int32 RemainingLoadedAmmo = 0;
+		const bool bCollected = Inventory.CollectItem(
+			Definition,
+			Quantity,
+			LoadedAmmo,
+			OutItemInstanceId,
+			RemainingLoadedAmmo,
+			bMakeCollectedItemActive);
+		if (OutRemainingLoadedAmmo)
+		{
+			*OutRemainingLoadedAmmo = RemainingLoadedAmmo;
+		}
+		return bCollected;
+	}
+
 	FGuid Collect(UNotoInventoryComponent& Inventory, UNotoItemDefinition& Definition, int32 Quantity = 1)
 	{
 		FGuid ItemInstanceId;
-		check(Inventory.CollectItem(&Definition, Quantity, -1, ItemInstanceId));
+		check(TryCollect(Inventory, &Definition, Quantity, -1, ItemInstanceId));
 		return ItemInstanceId;
 	}
 }
@@ -200,15 +232,15 @@ bool FNotoInventoryStackAndMagazineTest::RunTest(const FString& Parameters)
 	UNotoItemDefinition* DuplicateWeapon = MakeDefinition(
 		TEXT("DuplicateWeapon"), ENotoItemType::MainWeapon, 1, true, 6);
 	FGuid EquippedWeaponId;
-	TestTrue(TEXT("Initial weapon collection succeeds"), DuplicateWeaponWorld.Inventory->CollectItem(
-		         DuplicateWeapon, 1, 2, EquippedWeaponId));
+	TestTrue(TEXT("Initial weapon collection succeeds"), TryCollect(
+		         *DuplicateWeaponWorld.Inventory, DuplicateWeapon, 1, 2, EquippedWeaponId));
 	TestTrue(
 		TEXT("Duplicate weapon can transfer its loaded rounds"),
 		DuplicateWeaponWorld.Inventory->CanCollectItem(DuplicateWeapon, 1, 4));
 	FGuid RefilledWeaponId;
 	TestTrue(
 		TEXT("Duplicate weapon collection transfers rounds"),
-		DuplicateWeaponWorld.Inventory->CollectItem(DuplicateWeapon, 1, 4, RefilledWeaponId));
+		TryCollect(*DuplicateWeaponWorld.Inventory, DuplicateWeapon, 1, 4, RefilledWeaponId));
 	TestEqual(TEXT("Duplicate collection returns the equipped weapon"), RefilledWeaponId, EquippedWeaponId);
 	TestEqual(
 		TEXT("Duplicate collection does not create another weapon"),
@@ -222,6 +254,56 @@ bool FNotoInventoryStackAndMagazineTest::RunTest(const FString& Parameters)
 	TestFalse(
 		TEXT("A full matching weapon cannot consume another duplicate"),
 		DuplicateWeaponWorld.Inventory->CanCollectItem(DuplicateWeapon, 1, 1));
+
+	FTestWorld OverflowWeaponWorld;
+	FGuid OverflowWeaponId;
+	TestTrue(TEXT("Overflow test weapon collection succeeds"), TryCollect(
+		         *OverflowWeaponWorld.Inventory, DuplicateWeapon, 1, 5, OverflowWeaponId));
+	FGuid OverflowRefilledWeaponId;
+	int32 RemainingLoadedAmmo = 0;
+	TestTrue(TEXT("A duplicate transfers the rounds that fit"), TryCollect(
+		         *OverflowWeaponWorld.Inventory,
+		         DuplicateWeapon,
+		         1,
+		         4,
+		         OverflowRefilledWeaponId,
+		         true,
+		         &RemainingLoadedAmmo));
+	TestEqual(TEXT("Overflow transfer returns the equipped weapon"), OverflowRefilledWeaponId, OverflowWeaponId);
+	TestEqual(TEXT("Overflow transfer reports every unconsumed round"), RemainingLoadedAmmo, 3);
+	FNotoItemInstance OverflowWeaponItem;
+	TestTrue(TEXT("Overflow test weapon remains"), OverflowWeaponWorld.Inventory->GetItem(
+		         OverflowWeaponId, OverflowWeaponItem));
+	TestEqual(TEXT("Overflow transfer fills the equipped weapon"), OverflowWeaponItem.LoadedAmmo, 6);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FNotoInventoryDefinitionResolutionTest,
+	"NoTomorrow.Inventory.DefinitionResolution",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FNotoInventoryDefinitionResolutionTest::RunTest(const FString& Parameters)
+{
+	using namespace NotoInventoryTests;
+
+	UNotoItemDefinition* Definition = LoadObject<UNotoItemDefinition>(
+		nullptr,
+		TEXT("/Game/Items/Definitions/DA_Tool_Test.DA_Tool_Test"));
+	if (!TestNotNull(TEXT("Authored definition loads"), Definition))
+	{
+		return false;
+	}
+
+	UNotoInventoryComponent* Inventory = NewObject<UNotoInventoryComponent>();
+	const FGuid ItemInstanceId = Add(*Inventory, *Definition, 1);
+	ClearFirstItemDefinition(*Inventory);
+	FNotoItemInstance Item;
+	TestTrue(TEXT("Saved item state remains addressable while unresolved"), Inventory->GetItem(ItemInstanceId, Item));
+	TestNull(TEXT("Runtime definition starts unresolved"), Item.Definition.Get());
+	TestTrue(TEXT("Definition ids resolve after saved state is restored"), Inventory->ResolveItemDefinitions());
+	TestTrue(TEXT("Resolved item remains addressable"), Inventory->GetItem(ItemInstanceId, Item));
+	TestEqual(TEXT("Resolved definition matches the authored asset"), Item.Definition.Get(), Definition);
 	return true;
 }
 
@@ -284,7 +366,7 @@ bool FNotoInventoryCollectionPlanningTest::RunTest(const FString& Parameters)
 	FGuid CollectedId;
 	TestTrue(
 		TEXT("Matching equipped stack collection succeeds"),
-		TestWorld.Inventory->CollectItem(Tool, 5, -1, CollectedId));
+		TryCollect(*TestWorld.Inventory, Tool, 5, -1, CollectedId));
 	TestEqual(TEXT("Matching equipped stack is returned"), CollectedId, EquippedStack);
 	FNotoItemInstance EarlierItem;
 	FNotoItemInstance EquippedItem;
@@ -330,20 +412,20 @@ bool FNotoInventoryActiveSlotPreservationTest::RunTest(const FString& Parameters
 	Collect(*TestWorld.Inventory, *MainWeapon);
 
 	FGuid SecondaryItemId;
-	TestTrue(TEXT("Initial secondary collection succeeds"), TestWorld.Inventory->CollectItem(
-		SecondaryWeapon, 1, 2, SecondaryItemId));
+	TestTrue(TEXT("Initial secondary collection succeeds"), TryCollect(
+		         *TestWorld.Inventory, SecondaryWeapon, 1, 2, SecondaryItemId));
 	TestTrue(TEXT("Main weapon can become active"), TestWorld.Inventory->SetActiveSlot(ENotoEquipmentSlot::MainWeapon));
 
 	FGuid RefilledSecondaryItemId;
-	TestTrue(TEXT("Secondary ammo refill succeeds without activating it"), TestWorld.Inventory->CollectItem(
-		SecondaryWeapon, 1, 1, RefilledSecondaryItemId, false));
+	TestTrue(TEXT("Secondary ammo refill succeeds without activating it"), TryCollect(
+		         *TestWorld.Inventory, SecondaryWeapon, 1, 1, RefilledSecondaryItemId, false));
 	TestEqual(TEXT("Ammo refill returns the equipped secondary"), RefilledSecondaryItemId, SecondaryItemId);
 	TestEqual(TEXT("Ammo refill preserves the main active slot"), TestWorld.Inventory->GetActiveSlot(),
 	          ENotoEquipmentSlot::MainWeapon);
 
 	FGuid ReplacementItemId;
-	TestTrue(TEXT("Secondary replacement succeeds without activating it"), TestWorld.Inventory->CollectItem(
-		ReplacementSecondary, 1, -1, ReplacementItemId, false));
+	TestTrue(TEXT("Secondary replacement succeeds without activating it"), TryCollect(
+		         *TestWorld.Inventory, ReplacementSecondary, 1, -1, ReplacementItemId, false));
 	FNotoItemInstance EquippedSecondary;
 	TestTrue(TEXT("Replacement secondary is equipped"), TestWorld.Inventory->GetEquippedItem(
 		         ENotoEquipmentSlot::SecondaryWeapon, EquippedSecondary));
@@ -423,7 +505,7 @@ bool FNotoInventoryToolReplacementTest::RunTest(const FString& Parameters)
 	UNotoItemDefinition* BlockedReplacement = MakeDefinition(TEXT("BlockedReplacement"), ENotoItemType::Tool);
 	FGuid FailedItemId;
 	TestFalse(TEXT("Collection fails when every replacement is non-droppable"),
-	          FailureWorld.Inventory->CollectItem(BlockedReplacement, 1, -1, FailedItemId));
+	          TryCollect(*FailureWorld.Inventory, BlockedReplacement, 1, -1, FailedItemId));
 	TestEqual(TEXT("Failed collection does not change item count"), FailureWorld.Inventory->GetItemsView().Num(),
 	          ItemsBefore.Num());
 	TestEqual(
@@ -502,8 +584,8 @@ bool FNotoInventoryDropAndNotificationTest::RunTest(const FString& Parameters)
 	Listener->Reset();
 
 	FGuid NewWeaponId;
-	TestTrue(TEXT("Replacement collection succeeds"), DropWorld.Inventory->CollectItem(
-		         NewWeapon, 1, -1, NewWeaponId));
+	TestTrue(TEXT("Replacement collection succeeds"), TryCollect(
+		         *DropWorld.Inventory, NewWeapon, 1, -1, NewWeaponId));
 	TestEqual(TEXT("Replacement emits one inventory callback"), Listener->InventoryChangedCount, 1);
 	TestEqual(TEXT("Replacement emits one equipment callback"), Listener->EquipmentChangedCount, 1);
 	TestEqual(TEXT("Replacement emits two callbacks"), Listener->CallbackOrder.Num(), 2);
@@ -544,8 +626,8 @@ bool FNotoInventoryDropAndNotificationTest::RunTest(const FString& Parameters)
 	                                                      &UNotoInventoryTestListener::HandleEquipmentChanged);
 	UNotoItemDefinition* BlockedTool = MakeDefinition(TEXT("NotificationBlockedReplacement"), ENotoItemType::Tool);
 	FGuid FailedItemId;
-	TestFalse(TEXT("Blocked collection fails"), FailureWorld.Inventory->CollectItem(
-		          BlockedTool, 1, -1, FailedItemId));
+	TestFalse(TEXT("Blocked collection fails"), TryCollect(
+		          *FailureWorld.Inventory, BlockedTool, 1, -1, FailedItemId));
 	TestEqual(TEXT("Failed collection emits no inventory callback"), FailureListener->InventoryChangedCount, 0);
 	TestEqual(TEXT("Failed collection emits no equipment callback"), FailureListener->EquipmentChangedCount, 0);
 	TestEqual(TEXT("Failed collection records no callback order"), FailureListener->CallbackOrder.Num(), 0);
@@ -577,8 +659,8 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	UNotoItemDefinition* DuplicateWeapon = MakeDefinition(
 		TEXT("PickupDuplicateWeapon"), ENotoItemType::MainWeapon, 1, true, 6);
 	FGuid DuplicateWeaponId;
-	TestTrue(TEXT("Initial duplicate test weapon is collected"), DuplicateWeaponWorld.Inventory->CollectItem(
-		         DuplicateWeapon, 1, 2, DuplicateWeaponId));
+	TestTrue(TEXT("Initial duplicate test weapon is collected"), TryCollect(
+		         *DuplicateWeaponWorld.Inventory, DuplicateWeapon, 1, 2, DuplicateWeaponId));
 	ANotoItemPickup* DuplicateWeaponPickup = DuplicateWeaponWorld.World->SpawnActor<ANotoItemPickup>();
 	DuplicateWeaponPickup->InitializePickup(DuplicateWeapon, 1, 4);
 	TestTrue(
@@ -592,6 +674,34 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	TestEqual(TEXT("Matching weapon receives the pickup rounds"), RefilledWeapon.LoadedAmmo, 6);
 	TestTrue(TEXT("Consumed duplicate weapon pickup is destroyed"), DuplicateWeaponPickup->IsActorBeingDestroyed());
 
+	TestTrue(
+		TEXT("Equipped duplicate weapon can be prepared near capacity"),
+		DuplicateWeaponWorld.Inventory->SetLoadedAmmo(DuplicateWeaponId, 5));
+	ANotoItemPickup* OverflowWeaponPickup = DuplicateWeaponWorld.World->SpawnActor<ANotoItemPickup>();
+	OverflowWeaponPickup->InitializePickup(DuplicateWeapon, 1, 4);
+	OverflowWeaponPickup->Interact_Implementation(DuplicateWeaponWorld.Pawn, FNotoInteractionRequest());
+	TestFalse(
+		TEXT("Partially consumed duplicate weapon pickup remains in the world"),
+		OverflowWeaponPickup->IsActorBeingDestroyed());
+	TestTrue(
+		TEXT("Equipped weapon remains after partial pickup transfer"),
+		DuplicateWeaponWorld.Inventory->GetItem(DuplicateWeaponId, RefilledWeapon));
+	TestEqual(TEXT("Partial pickup transfer fills the equipped weapon"), RefilledWeapon.LoadedAmmo, 6);
+	TestTrue(
+		TEXT("Equipped weapon can spend rounds before collecting the remainder"),
+		DuplicateWeaponWorld.Inventory->SetLoadedAmmo(DuplicateWeaponId, 3));
+	TestTrue(
+		TEXT("Remaining pickup rounds can be collected later"),
+		OverflowWeaponPickup->CanInteract_Implementation(DuplicateWeaponWorld.Pawn));
+	OverflowWeaponPickup->Interact_Implementation(DuplicateWeaponWorld.Pawn, FNotoInteractionRequest());
+	TestTrue(
+		TEXT("Pickup is destroyed after its remaining rounds are consumed"),
+		OverflowWeaponPickup->IsActorBeingDestroyed());
+	TestTrue(
+		TEXT("Equipped weapon remains after consuming the pickup remainder"),
+		DuplicateWeaponWorld.Inventory->GetItem(DuplicateWeaponId, RefilledWeapon));
+	TestEqual(TEXT("Pickup remainder refills the equipped weapon"), RefilledWeapon.LoadedAmmo, 6);
+
 	ANotoItemPickup* InvalidQuantityWeaponPickup = DuplicateWeaponWorld.World->SpawnActor<ANotoItemPickup>();
 	InvalidQuantityWeaponPickup->InitializePickup(DuplicateWeapon, 2, 4);
 	TestFalse(
@@ -600,7 +710,7 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	FGuid InvalidQuantityItemId;
 	TestFalse(
 		TEXT("Collection rejects a non-stackable weapon quantity above one"),
-		DuplicateWeaponWorld.Inventory->CollectItem(DuplicateWeapon, 2, 4, InvalidQuantityItemId));
+		TryCollect(*DuplicateWeaponWorld.Inventory, DuplicateWeapon, 2, 4, InvalidQuantityItemId));
 	TestFalse(
 		TEXT("Invalid-quantity weapon pickup remains in the world"),
 		InvalidQuantityWeaponPickup->IsActorBeingDestroyed());
@@ -637,7 +747,7 @@ bool FNotoInventoryPickupAgreementTest::RunTest(const FString& Parameters)
 	FGuid FailedItemId;
 	TestFalse(
 		TEXT("CollectItem agrees with blocked pickup"),
-		FailureWorld.Inventory->CollectItem(FailureItem, 1, -1, FailedItemId));
+		TryCollect(*FailureWorld.Inventory, FailureItem, 1, -1, FailedItemId));
 	FailurePickup->Interact_Implementation(FailureWorld.Pawn, FNotoInteractionRequest());
 	TestFalse(TEXT("Failed pickup remains in the world"), FailurePickup->IsActorBeingDestroyed());
 	TestEqual(TEXT("Failed pickup does not mutate inventory"), FailureWorld.Inventory->GetTotalQuantity(FailureItem),
