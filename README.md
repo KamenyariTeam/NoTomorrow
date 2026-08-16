@@ -19,6 +19,20 @@ C++ owns engine-facing foundations and lifecycle behavior. Blueprints and data a
 
 To enable input, create `IA_Interact`, add it to `IMC_Player_Default`, and add it to `DA_InputConfig_Player` with `InputTag.Interact`. Place `ANotoTestPickup` in a level to verify the path; it writes custom depth and destroys itself when interacted with. A post-process material that renders Custom Depth as a white outline is required for the visible outline.
 
+### Inventory debugging
+
+The non-shipping `UNotoCheatManager` provides lightweight console commands for testing inventory behavior without a UI:
+
+```text
+NotoInventoryDump
+NotoInventoryDebug
+NotoInventoryGive /Game/Items/DA_TestTool.DA_TestTool 1 -1
+NotoInventoryDropActive 1
+NotoInventorySetActiveSlot 7
+```
+
+`NotoInventoryGive` takes an item-definition path and optional quantity and loaded-ammo values. Magazine weapons carry their own ammo; picking up a matching weapon refills it. `NotoInventorySetActiveSlot` uses `0`–`7` (`0` none, `1` main weapon, `2` secondary weapon, `3`–`7` tools).
+
 ## Requirements
 
 - Unreal Engine 5.8, using the Engine build associated with `NoTomorrow.uproject`.

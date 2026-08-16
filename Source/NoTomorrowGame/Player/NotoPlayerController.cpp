@@ -5,6 +5,8 @@
 
 #include "Blueprint/UserWidget.h"
 #include "CommonInputSubsystem.h"
+#include "Player/NotoCheatManager.h"
+#include "Player/NotoPlayerState.h"
 #include "UObject/ConstructorHelpers.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(NotoPlayerController)
@@ -14,6 +16,7 @@ ANotoPlayerController::ANotoPlayerController(const FObjectInitializer& ObjectIni
 {
 	static ConstructorHelpers::FClassFinder<UUserWidget> ReticleClass(TEXT("/Game/UI/Foundation/SoftwareCursors/W_GameplayReticle"));
 	DefaultGameplayReticleClass = ReticleClass.Class;
+	CheatClass = UNotoCheatManager::StaticClass();
 }
 
 void ANotoPlayerController::BeginPlay()
@@ -117,6 +120,38 @@ bool ANotoPlayerController::IsUsingGamepad() const
 {
 	const UCommonInputSubsystem* InputSubsystem = UCommonInputSubsystem::Get(GetLocalPlayer());
 	return InputSubsystem && InputSubsystem->GetCurrentInputType() == ECommonInputType::Gamepad;
+}
+
+void ANotoPlayerController::InitPlayerState()
+{
+	Super::InitPlayerState();
+	NotifyCheatManagerPlayerStateChanged();
+}
+
+void ANotoPlayerController::CleanupPlayerState()
+{
+	Super::CleanupPlayerState();
+	NotifyCheatManagerPlayerStateChanged();
+}
+
+void ANotoPlayerController::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	NotifyCheatManagerPlayerStateChanged();
+}
+
+UNotoInventoryComponent* ANotoPlayerController::GetInventoryComponent() const
+{
+	const ANotoPlayerState* NotoPlayerState = GetPlayerState<ANotoPlayerState>();
+	return NotoPlayerState ? NotoPlayerState->GetInventoryComponent() : nullptr;
+}
+
+void ANotoPlayerController::NotifyCheatManagerPlayerStateChanged()
+{
+	if (UNotoCheatManager* NotoCheatManager = Cast<UNotoCheatManager>(CheatManager))
+	{
+		NotoCheatManager->HandlePlayerStateChanged();
+	}
 }
 
 void ANotoPlayerController::HandleInputMethodChanged(ECommonInputType NewInputType)

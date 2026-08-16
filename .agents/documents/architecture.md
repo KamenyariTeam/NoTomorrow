@@ -17,6 +17,8 @@ This document records the current foundation and its intended boundaries.
 - `ANotoCharacter::SetupPlayerInputComponent` hands input setup to `UNotoPlayerPawnComponent`.
 - `UNotoPlayerPawnComponent` owns local movement bindings and computes aim from the active input method. `ANotoPlayerController` owns the per-player gameplay reticle, Common Input method switching, and the boundary used by weapons and UI to replace or hide the reticle. `UNotoInputConfig` maps semantic gameplay tags to authored input actions; the default mapping context is installed by Enhanced Input developer settings.
 - `ANotoPlayerState` owns the player's single replicated Ability System Component. `ANotoCharacter` implements `IAbilitySystemInterface` as the current avatar and initializes actor info on server possession and client PlayerState replication.
+- `ANotoPlayerState` owns the UI-independent `UNotoInventoryComponent`. Primary data assets describe immutable items; save-friendly item-instance, equipment, and active-slot state hold mutable state. Magazine ammunition lives on weapon instances rather than standalone item assets; collecting a matching equipped magazine weapon transfers its loaded rounds. World pickups use the normal interaction interface, and presentation observes inventory/equipment delegates through the controller convenience accessor.
+- `UNotoCheatManager` owns developer-only gameplay commands and their transient debug state. `ANotoPlayerController` selects it as the project cheat-manager class and only forwards PlayerState lifecycle changes needed for safe debug delegate rebinding.
 - Gameplay reticles are viewport widgets independent from software cursors. Software cursors remain configured through `UUserInterfaceSettings` for menus and other pointer-driven UI.
 - Stock Unreal Engine, AssetManager, GameInstance, WorldSettings, and HUD behavior is used until game-specific behavior creates a real subclass requirement.
 
@@ -24,6 +26,7 @@ This document records the current foundation and its intended boundaries.
 
 - C++ owns engine integration, reusable lifecycle behavior, and stable seams.
 - Blueprints and assets configure the concrete game mode, character, cameras, tagged input data, cursor, and maps.
+- Item definitions and placed pickups are authored assets. Weapon meshes, attacks, equipped presentation, sounds, icons, notes, and audio-log playback remain presentation or feature content rather than inventory-component responsibilities.
 - Game-specific behavior belongs in `NoTomorrowGame`. A plugin is appropriate only for genuinely reusable code with a clear independent boundary.
 - Game Features are reserved for features that require independent activation/deactivation and feature-owned actions or content. They are not the default project-composition mechanism.
 
