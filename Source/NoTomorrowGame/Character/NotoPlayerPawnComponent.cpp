@@ -3,6 +3,7 @@
 #include "NotoPlayerPawnComponent.h"
 
 #include "Perception/AISense_Hearing.h"
+#include "Combat/NotoFirearmComponent.h"
 #include "Development/NotoGameplayTags.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -102,6 +103,18 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 		&ThisClass::Input_InteractModified);
 	NotoInputComponent->BindNativeAction(
 		DefaultInputConfig,
+		NotoGameplayTags::InputTag_Fire,
+		ETriggerEvent::Started,
+		this,
+		&ThisClass::Input_Fire);
+	NotoInputComponent->BindNativeAction(
+		DefaultInputConfig,
+		NotoGameplayTags::InputTag_Reload,
+		ETriggerEvent::Started,
+		this,
+		&ThisClass::Input_Reload);
+	NotoInputComponent->BindNativeAction(
+		DefaultInputConfig,
 		NotoGameplayTags::InputTag_Drop,
 		ETriggerEvent::Started,
 		this,
@@ -198,6 +211,28 @@ void UNotoPlayerPawnComponent::Input_Interact()
 void UNotoPlayerPawnComponent::Input_InteractModified()
 {
 	TryInteract(true);
+}
+
+void UNotoPlayerPawnComponent::Input_Fire()
+{
+	if (APawn* Pawn = GetPawn<APawn>())
+	{
+		if (UNotoFirearmComponent* Firearm = Pawn->FindComponentByClass<UNotoFirearmComponent>())
+		{
+			Firearm->TryFire();
+		}
+	}
+}
+
+void UNotoPlayerPawnComponent::Input_Reload()
+{
+	if (APawn* Pawn = GetPawn<APawn>())
+	{
+		if (UNotoFirearmComponent* Firearm = Pawn->FindComponentByClass<UNotoFirearmComponent>())
+		{
+			Firearm->TryReload();
+		}
+	}
 }
 
 void UNotoPlayerPawnComponent::TryInteract(bool bModifierHeld)

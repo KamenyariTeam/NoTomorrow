@@ -8,6 +8,8 @@
 
 class UInputComponent;
 class UGameplayCameraComponent;
+class UNotoFirearmComponent;
+class UNotoHealthComponent;
 class UNotoInteractionComponent;
 class UNotoPlayerPawnComponent;
 
@@ -30,8 +32,13 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-protected:
+	UFUNCTION(BlueprintPure, Category = "Noto|Health")
+	UNotoHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
+	UFUNCTION(BlueprintPure, Category = "Noto|Weapon")
+	UNotoFirearmComponent* GetFirearmComponent() const { return FirearmComponent; }
+
+protected:
 	void InitializeAbilitySystem();
 	void UninitializeAbilitySystem();
 
@@ -40,6 +47,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Interaction", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UNotoInteractionComponent> InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Health", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoHealthComponent> HealthComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Weapon", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoFirearmComponent> FirearmComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UNotoPlayerPawnComponent> PlayerPawnComponent;

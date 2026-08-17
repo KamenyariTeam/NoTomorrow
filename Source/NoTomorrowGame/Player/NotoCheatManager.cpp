@@ -74,13 +74,22 @@ void UNotoCheatManager::NotoInventoryDump() const
 		const FString ItemType = Item.Definition
 			                         ? UEnum::GetValueAsString(Item.Definition->GetItemType())
 			                         : TEXT("<unknown>");
+		const int32 LoadedAmmo = Item.InsertedMagazine.IsValid()
+			                         ? Item.InsertedMagazine.LoadedAmmo
+			                         : Item.LoadedAmmo;
 		FString Line = FString::Printf(TEXT("%s \"%s\" type=%s id=%s quantity=%d loaded=%d"),
 		                               *DefinitionName,
 		                               *DisplayName,
 		                               *ItemType,
 		                               *Item.InstanceId.ToString(),
 		                               Item.Quantity,
-		                               Item.LoadedAmmo);
+		                               LoadedAmmo);
+		if (Item.InsertedMagazine.IsValid())
+		{
+			Line += FString::Printf(TEXT(" magazine=%s magazine-id=%s"),
+			                        *Item.InsertedMagazine.DefinitionId.ToString(),
+			                        *Item.InsertedMagazine.InstanceId.ToString());
+		}
 		if (EquippedSlot != ENotoEquipmentSlot::None)
 		{
 			Line += FString::Printf(TEXT(" equipped=%s"), *UEnum::GetValueAsString(EquippedSlot));

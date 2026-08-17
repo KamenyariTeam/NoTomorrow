@@ -22,6 +22,40 @@ enum class ENotoEquipmentSlot : uint8
 	Tool5 = 7
 };
 
+/** A detachable magazine physically owned by a weapon instead of the spare inventory array. */
+USTRUCT(BlueprintType)
+struct NOTOMORROWGAME_API FNotoInsertedMagazine
+{
+	GENERATED_BODY()
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
+	FGuid InstanceId;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
+	FPrimaryAssetId DefinitionId;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UNotoItemDefinition> Definition;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
+	int32 LoadedAmmo = 0;
+
+	bool IsValid() const { return InstanceId.IsValid() && DefinitionId.IsValid(); }
+
+	bool IsEmpty() const
+	{
+		return !InstanceId.IsValid() && !DefinitionId.IsValid() && !Definition && LoadedAmmo == 0;
+	}
+
+	void Reset()
+	{
+		InstanceId.Invalidate();
+		DefinitionId = FPrimaryAssetId();
+		Definition = nullptr;
+		LoadedAmmo = 0;
+	}
+};
+
 /** Mutable, save-friendly state for one item stack or unique item. */
 USTRUCT(BlueprintType)
 struct NOTOMORROWGAME_API FNotoItemInstance
@@ -42,9 +76,17 @@ struct NOTOMORROWGAME_API FNotoItemInstance
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
 	int32 Quantity = 0;
 
-	/** Per-instance magazine ammunition. There are no standalone ammunition items. */
+	/** Loose rounds in an internal-feed weapon, or rounds in a spare magazine item. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
 	int32 LoadedAmmo = 0;
+
+	/** Physical detachable magazine currently owned by this weapon. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
+	FNotoInsertedMagazine InsertedMagazine;
+
+	/** Legacy weapon-local reserve retained under its original serialized name for one-way save migration. */
+	UPROPERTY(SaveGame, Meta = (DeprecatedProperty, DeprecationMessage = "Reserve ammo migrates to physical magazines."))
+	int32 ReserveAmmo = 0;
 };
 
 /** Slot state refers to an item instance instead of duplicating its mutable data. */

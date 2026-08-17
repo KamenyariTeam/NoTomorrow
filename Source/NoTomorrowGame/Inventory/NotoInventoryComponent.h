@@ -21,17 +21,23 @@ class NOTOMORROWGAME_API UNotoInventoryComponent : public UActorComponent
 public:
 	UNotoInventoryComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	/** Adds an item without equipping it. LoadedAmmo below zero initializes only magazine items as full. */
+	/** Adds an item without equipping it. LoadedAmmo below zero initializes magazines and weapons as full. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
 	bool AddItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId);
 
-	/** Adds an item and equips weapon/tool pickups. Duplicate magazine weapons transfer rounds that fit. */
+	/** Adds an item and equips it only when a compatible equipment slot is free. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
 	bool CollectItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId,
 	                 int32& OutRemainingLoadedAmmo, bool bMakeCollectedItemActive = true);
 
+	/** Collects a dropped unique item without changing its identity or mutable state. */
+	bool CollectItemInstance(const FNotoItemInstance& ItemInstance, FGuid& OutItemInstanceId,
+	                         bool bMakeCollectedItemActive = true);
+
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
 	bool CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo) const;
+
+	bool CanCollectItemInstance(const FNotoItemInstance& ItemInstance) const;
 
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
 	bool EquipItem(FGuid ItemInstanceId, ENotoEquipmentSlot Slot, bool bDropReplacedItem = true);
@@ -50,6 +56,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
 	bool SetLoadedAmmo(FGuid ItemInstanceId, int32 LoadedAmmo);
+
+	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
+	bool ConsumeLoadedAmmo(FGuid ItemInstanceId, int32 Amount);
+
+	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
+	bool ReloadItem(FGuid ItemInstanceId, int32& OutReloadedRounds);
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
 	bool GetItem(FGuid ItemInstanceId, FNotoItemInstance& OutItem) const;
@@ -78,7 +90,7 @@ public:
 	const TArray<FNotoItemInstance>& GetItemsView() const { return Items; }
 	const TArray<FNotoEquippedItem>& GetEquipmentView() const { return Equipment; }
 
-	/** Resolves transient definition pointers after saved state has been deserialized. */
+	/** Resolves transient definitions and migrates legacy LoadedAmmo/ReserveAmmo weapon state after load. */
 	bool ResolveItemDefinitions();
 
 	UPROPERTY(BlueprintAssignable, Category = "Noto|Inventory")
@@ -91,10 +103,8 @@ private:
 	enum class ECollectionAction : uint8
 	{
 		AddOnly,
-		TransferWeaponAmmo,
 		FillEquippedStack,
-		Equip,
-		Replace
+		Equip
 	};
 
 	struct FCollectionPlan
@@ -102,7 +112,6 @@ private:
 		ECollectionAction Action = ECollectionAction::AddOnly;
 		ENotoEquipmentSlot Slot = ENotoEquipmentSlot::None;
 		FGuid PreferredItemInstanceId;
-		FGuid ReplacedItemInstanceId;
 	};
 
 	struct FScopedMutation
@@ -113,11 +122,16 @@ private:
 		UNotoInventoryComponent& Inventory;
 	};
 
-	bool AddItemInternal(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid PreferredItemInstanceId, FGuid& OutItemInstanceId);
-	bool BuildCollectionPlan(const UNotoItemDefinition& Definition, int32 Quantity, int32 LoadedAmmo, FCollectionPlan& OutPlan) const;
+	bool AddItemInternal(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo,
+	                     FGuid PreferredItemInstanceId, FGuid& OutItemInstanceId);
+	bool AddItemInstanceInternal(const FNotoItemInstance& ItemInstance, FGuid& OutItemInstanceId);
+	bool BuildCollectionPlan(const UNotoItemDefinition& Definition, int32 Quantity, FCollectionPlan& OutPlan) const;
+	static void InitializeItemAmmunition(FNotoItemInstance& Item, int32 LoadedAmmo);
+	static bool IsItemStateValid(const FNotoItemInstance& Item);
 	static int32 ResolveLoadedAmmo(const UNotoItemDefinition& Definition, int32 LoadedAmmo);
 	bool CanDropItem(FGuid ItemInstanceId, int32 Quantity) const;
 	bool IsEquipmentItem(const UNotoItemDefinition& Definition) const;
+	bool IsInstanceIdInUse(FGuid InstanceId) const;
 	FNotoItemInstance* FindItem(FGuid ItemInstanceId);
 	const FNotoItemInstance* FindItem(FGuid ItemInstanceId) const;
 	FNotoEquippedItem* FindEquipment(ENotoEquipmentSlot Slot);

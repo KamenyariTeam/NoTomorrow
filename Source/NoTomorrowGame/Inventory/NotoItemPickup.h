@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Interaction/NotoInteractableActor.h"
+#include "Inventory/NotoInventoryTypes.h"
 #include "NotoItemPickup.generated.h"
 
 class UNotoItemDefinition;
@@ -21,6 +22,7 @@ public:
 	virtual void Interact_Implementation(APawn* Interactor, const FNotoInteractionRequest& Request) override;
 
 	void InitializePickup(UNotoItemDefinition* InDefinition, int32 InQuantity, int32 InLoadedAmmo);
+	void InitializePickup(const FNotoItemInstance& InItemInstance);
 
 private:
 	bool TryPickUp(APawn* Interactor, bool bMakeCollectedItemActive);
@@ -34,7 +36,12 @@ private:
 		Meta = (AllowPrivateAccess = "true", ClampMin = "1"))
 	int32 Quantity = 1;
 
-	/** Below zero initializes a magazine weapon with a full magazine; other items use zero. */
+	/** Below zero initializes a magazine, detachable weapon, or internal-feed weapon as full. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Noto|Inventory", Meta = (AllowPrivateAccess = "true"))
 	int32 LoadedAmmo = -1;
+
+	UPROPERTY(VisibleInstanceOnly, Category = "Noto|Inventory")
+	FNotoItemInstance RuntimeItemInstance;
+
+	bool bHasRuntimeItemInstance = false;
 };

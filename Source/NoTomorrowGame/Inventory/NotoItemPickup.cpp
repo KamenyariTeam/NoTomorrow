@@ -28,7 +28,9 @@ bool ANotoItemPickup::CanInteract_Implementation(APawn* Interactor) const
 		return false;
 	}
 
-	return Inventory->CanCollectItem(ItemDefinition, Quantity, LoadedAmmo);
+	return bHasRuntimeItemInstance
+		       ? Inventory->CanCollectItemInstance(RuntimeItemInstance)
+		       : Inventory->CanCollectItem(ItemDefinition, Quantity, LoadedAmmo);
 }
 
 void ANotoItemPickup::Interact_Implementation(APawn* Interactor, const FNotoInteractionRequest& Request)
@@ -47,33 +49,48 @@ bool ANotoItemPickup::TryPickUp(APawn* Interactor, bool bMakeCollectedItemActive
 
 	FGuid ItemInstanceId;
 	int32 RemainingLoadedAmmo = 0;
-	const bool bCollected = Inventory->CollectItem(
-		ItemDefinition,
-		Quantity,
-		LoadedAmmo,
-		ItemInstanceId,
-		RemainingLoadedAmmo,
-		bMakeCollectedItemActive);
+	const bool bCollected = bHasRuntimeItemInstance
+		                        ? Inventory->CollectItemInstance(
+			                        RuntimeItemInstance,
+			                        ItemInstanceId,
+			                        bMakeCollectedItemActive)
+		                        : Inventory->CollectItem(
+			                        ItemDefinition,
+			                        Quantity,
+			                        LoadedAmmo,
+			                        ItemInstanceId,
+			                        RemainingLoadedAmmo,
+			                        bMakeCollectedItemActive);
 	if (bCollected)
 	{
-		if (RemainingLoadedAmmo > 0)
-		{
-			LoadedAmmo = RemainingLoadedAmmo;
-			return true;
-		}
-
 		Destroy();
 		return true;
 	}
 	return false;
 }
 
-void ANotoItemPickup::InitializePickup(UNotoItemDefinition* InDefinition, int32 InQuantity, int32 InLoadedAmmo)
+void ANotoItemPickup::InitializePickup(
+	UNotoItemDefinition* InDefinition,
+	int32 InQuantity,
+	int32 InLoadedAmmo)
 {
 	check(InDefinition && InQuantity > 0);
 	ItemDefinition = InDefinition;
 	Quantity = InQuantity;
 	LoadedAmmo = InLoadedAmmo;
+	bHasRuntimeItemInstance = false;
+	RuntimeItemInstance = FNotoItemInstance();
+	RefreshVisual();
+}
+
+void ANotoItemPickup::InitializePickup(const FNotoItemInstance& InItemInstance)
+{
+	check(InItemInstance.Definition && InItemInstance.Quantity > 0);
+	RuntimeItemInstance = InItemInstance;
+	bHasRuntimeItemInstance = true;
+	ItemDefinition = InItemInstance.Definition;
+	Quantity = InItemInstance.Quantity;
+	LoadedAmmo = InItemInstance.LoadedAmmo;
 	RefreshVisual();
 }
 

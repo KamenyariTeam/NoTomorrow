@@ -3,6 +3,8 @@
 #include "NotoCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "Combat/NotoFirearmComponent.h"
+#include "Combat/NotoHealthComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/GameplayCameraComponent.h"
 #include "NotoPlayerPawnComponent.h"
@@ -30,6 +32,8 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	GameplayCameraComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 
 	InteractionComponent = CreateDefaultSubobject<UNotoInteractionComponent>(TEXT("InteractionComponent"));
+	HealthComponent = CreateDefaultSubobject<UNotoHealthComponent>(TEXT("HealthComponent"));
+	FirearmComponent = CreateDefaultSubobject<UNotoFirearmComponent>(TEXT("FirearmComponent"));
 	PlayerPawnComponent = CreateDefaultSubobject<UNotoPlayerPawnComponent>(TEXT("PlayerPawnComponent"));
 
 	bUseControllerRotationPitch = false;
@@ -91,6 +95,7 @@ void ANotoCharacter::InitializeAbilitySystem()
 	UAbilitySystemComponent* AbilitySystemComponent = NotoPlayerState->GetAbilitySystemComponent();
 	check(AbilitySystemComponent);
 	AbilitySystemComponent->InitAbilityActorInfo(NotoPlayerState, this);
+	HealthComponent->InitializeWithAbilitySystem(AbilitySystemComponent);
 }
 
 void ANotoCharacter::UninitializeAbilitySystem()
@@ -98,6 +103,7 @@ void ANotoCharacter::UninitializeAbilitySystem()
 	if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 		AbilitySystemComponent && AbilitySystemComponent->GetAvatarActor() == this)
 	{
+		HealthComponent->UninitializeFromAbilitySystem();
 		AbilitySystemComponent->ClearActorInfo();
 	}
 }
