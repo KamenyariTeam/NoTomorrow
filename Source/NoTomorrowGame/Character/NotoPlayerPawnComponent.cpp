@@ -8,8 +8,11 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Input/NotoInputComponent.h"
+#include "Inventory/NotoInventoryComponent.h"
+#include "Interaction/NotoInteractable.h"
 #include "Interaction/NotoInteractionComponent.h"
 #include "Player/NotoPlayerController.h"
+#include "Player/NotoPlayerState.h"
 #include "Engine/World.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(NotoPlayerPawnComponent)
@@ -91,6 +94,18 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 		ETriggerEvent::Started,
 		this,
 		&ThisClass::Input_Interact);
+	NotoInputComponent->BindNativeAction(
+		DefaultInputConfig,
+		NotoGameplayTags::InputTag_InteractModified,
+		ETriggerEvent::Started,
+		this,
+		&ThisClass::Input_InteractModified);
+	NotoInputComponent->BindNativeAction(
+		DefaultInputConfig,
+		NotoGameplayTags::InputTag_Drop,
+		ETriggerEvent::Started,
+		this,
+		&ThisClass::Input_Drop);
 
 	RefreshAimTickEnabled();
 }
@@ -177,12 +192,36 @@ void UNotoPlayerPawnComponent::Input_ToggleSneak()
 
 void UNotoPlayerPawnComponent::Input_Interact()
 {
+	TryInteract(false);
+}
+
+void UNotoPlayerPawnComponent::Input_InteractModified()
+{
+	TryInteract(true);
+}
+
+void UNotoPlayerPawnComponent::TryInteract(bool bModifierHeld)
+{
 	if (APawn* Pawn = GetPawn<APawn>())
 	{
 		if (UNotoInteractionComponent* InteractionComponent = Pawn->FindComponentByClass<UNotoInteractionComponent>())
 		{
-			InteractionComponent->TryInteract();
+			FNotoInteractionRequest Request;
+			Request.bUseAlternateInteraction = bModifierHeld != bPickupActiveSlotModifierReversed;
+			InteractionComponent->TryInteract(Request);
 		}
+	}
+}
+
+void UNotoPlayerPawnComponent::Input_Drop()
+{
+	APawn* Pawn = GetPawn<APawn>();
+	ANotoPlayerState* PlayerState = Pawn ? Pawn->GetPlayerState<ANotoPlayerState>() : nullptr;
+	UNotoInventoryComponent* Inventory = PlayerState ? PlayerState->GetInventoryComponent() : nullptr;
+	FNotoItemInstance ActiveItem;
+	if (Inventory && Inventory->GetActiveItem(ActiveItem))
+	{
+		Inventory->DropItem(ActiveItem.InstanceId, ActiveItem.Quantity);
 	}
 }
 

@@ -14,5 +14,5 @@ class NOTOMORROWGAME_API ANotoTestPickup : public ANotoInteractableActor
 public:
 	ANotoTestPickup();
 
-	virtual void Interact_Implementation(APawn* Interactor) override;
+	virtual void Interact_Implementation(APawn* Interactor, const FNotoInteractionRequest& Request) override;
 };

@@ -60,9 +60,14 @@ void UNotoInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickTy
 
 void UNotoInteractionComponent::TryInteract()
 {
+	TryInteract(FNotoInteractionRequest());
+}
+
+void UNotoInteractionComponent::TryInteract(const FNotoInteractionRequest& Request)
+{
 	if (APawn* Pawn = Cast<APawn>(GetOwner()); Pawn && IsValid(SelectedInteractable) && INotoInteractable::Execute_CanInteract(SelectedInteractable, Pawn))
 	{
-		INotoInteractable::Execute_Interact(SelectedInteractable, Pawn);
+		INotoInteractable::Execute_Interact(SelectedInteractable, Pawn, Request);
 	}
 }
 

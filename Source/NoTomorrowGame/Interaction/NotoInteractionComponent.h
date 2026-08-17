@@ -10,6 +10,7 @@ class AController;
 class APawn;
 class UPrimitiveComponent;
 class USphereComponent;
+struct FNotoInteractionRequest;
 
 /** Selects nearby interactables nearest the player's gameplay cursor. */
 UCLASS(Blueprintable, Meta = (BlueprintSpawnableComponent))
@@ -22,6 +23,8 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Noto|Interaction")
 	void TryInteract();
+
+	void TryInteract(const FNotoInteractionRequest& Request);
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Interaction")
 	AActor* GetSelectedInteractable() const;

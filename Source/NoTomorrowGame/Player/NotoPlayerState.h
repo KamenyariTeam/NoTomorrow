@@ -7,6 +7,7 @@
 #include "NotoPlayerState.generated.h"
 
 class UAbilitySystemComponent;
+class UNotoInventoryComponent;
 
 /** Persistent owner of the player's gameplay abilities and effects. */
 UCLASS()
@@ -19,7 +20,13 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
+	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
+	UNotoInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Abilities", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Inventory", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoInventoryComponent> InventoryComponent;
 };

@@ -8,6 +8,7 @@
 
 enum class ECommonInputType : uint8;
 class UUserWidget;
+class UNotoInventoryComponent;
 
 /**
  * The base player controller class used by this project.
@@ -33,14 +34,22 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Noto|Input")
 	bool IsUsingGamepad() const;
 
+	/** Convenience access for input and presentation; runtime inventory remains owned by PlayerState. */
+	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
+	UNotoInventoryComponent* GetInventoryComponent() const;
+
 protected:
 	//~APlayerController interface
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual bool SetPause(bool bPause, FCanUnpause CanUnpauseDelegate = FCanUnpause()) override;
+	virtual void InitPlayerState() override;
+	virtual void CleanupPlayerState() override;
+	virtual void OnRep_PlayerState() override;
 	//~End of APlayerController interface
 
 private:
+	void NotifyCheatManagerPlayerStateChanged();
 	void HandleInputMethodChanged(ECommonInputType NewInputType);
 	void ApplyCursorState();
 	void EnsureGameplayReticle();

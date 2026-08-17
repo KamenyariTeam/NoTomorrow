@@ -50,6 +50,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Noto|Movement")
 	FGameplayTag GetMovementState() const { return MovementState; }
 
+	/** Lets a future user-settings system reverse the interaction modifier at runtime. */
+	UFUNCTION(BlueprintCallable, Category = "Noto|Input")
+	void SetPickupActiveSlotModifierReversed(bool bReversed) { bPickupActiveSlotModifierReversed = bReversed; }
+
 	//~UActorComponent interface
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
@@ -67,6 +71,9 @@ protected:
 	void Input_Aim(const FInputActionValue& InputActionValue);
 	void Input_ToggleSneak();
 	void Input_Interact();
+	void Input_InteractModified();
+	void Input_Drop();
+	void TryInteract(bool bModifierHeld);
 	void UpdateAimFromMouseCursor();
 	bool GetMouseAimDirection(const APlayerController& PlayerController, const APawn& Pawn, FVector& OutAimDirection) const;
 	const FNotoMovementStateConfig* FindMovementStateConfig(FGameplayTag StateTag) const;
@@ -89,4 +96,7 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Input|Gamepad", Meta = (ClampMin = "0.0", Units = "cm"))
 	float GamepadAimRadius = 300.0f;
+
+	/** Default: the interaction modifier preserves the active slot. Reversed: it selects the collected item. */
+	bool bPickupActiveSlotModifierReversed = false;
 };

@@ -3,6 +3,7 @@
 #include "NotoPlayerState.h"
 
 #include "AbilitySystemComponent.h"
+#include "Inventory/NotoInventoryComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(NotoPlayerState)
 
@@ -12,6 +13,8 @@ ANotoPlayerState::ANotoPlayerState(const FObjectInitializer& ObjectInitializer)
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystem"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+
+	InventoryComponent = CreateDefaultSubobject<UNotoInventoryComponent>(TEXT("Inventory"));
 }
 
 UAbilitySystemComponent* ANotoPlayerState::GetAbilitySystemComponent() const
