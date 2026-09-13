@@ -7,9 +7,11 @@
 #include "Combat/NotoFirearmComponent.h"
 #include "Combat/NotoHealthComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/GameplayCameraComponent.h"
 #include "NotoPlayerPawnComponent.h"
 #include "Interaction/NotoInteractionComponent.h"
+#include "MotionWarpingComponent.h"
 #include "Player/NotoPlayerState.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
@@ -28,6 +30,13 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 		MeshComponent->SetCollisionProfileName(TEXT("PawnMesh"));
 	}
 
+	PresentationMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("PresentationMesh"));
+	PresentationMesh->SetupAttachment(GetMesh());
+	PresentationMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	PresentationMesh->SetGenerateOverlapEvents(false);
+	PresentationMesh->SetCanEverAffectNavigation(false);
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+
 	GameplayCameraComponent = CreateDefaultSubobject<UGameplayCameraComponent>(TEXT("CameraComponent"));
 	GameplayCameraComponent->SetupAttachment(RootComponent);
 	GameplayCameraComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
@@ -44,6 +53,11 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 
 	BaseEyeHeight = 80.0f;
 	CrouchedEyeHeight = 50.0f;
+}
+
+USkeletalMeshComponent* ANotoCharacter::GetPresentationMesh() const
+{
+	return PresentationMesh && PresentationMesh->GetSkeletalMeshAsset() ? PresentationMesh.Get() : GetMesh();
 }
 
 UAbilitySystemComponent* ANotoCharacter::GetAbilitySystemComponent() const
