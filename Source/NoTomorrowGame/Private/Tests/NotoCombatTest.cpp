@@ -5,17 +5,67 @@
 #include "Combat/NotoCombatDummy.h"
 
 #include "AbilitySystemComponent.h"
+#include "Character/NotoCharacter.h"
 #include "Combat/NotoDamageEffect.h"
+#include "Combat/NotoFirearmComponent.h"
 #include "Combat/NotoHealthComponent.h"
 #include "Combat/NotoHealthSet.h"
 #include "Development/NotoGameplayTags.h"
 #include "Engine/Engine.h"
 #include "Engine/World.h"
+#include "Inventory/NotoInventoryComponent.h"
+#include "Inventory/NotoItemDefinition.h"
 #include "Misc/AutomationTest.h"
+#include "Player/NotoPlayerState.h"
 #include "UObject/Package.h"
+#include "UObject/UnrealType.h"
 
 namespace NotoCombatTests
 {
+	template <typename PropertyType>
+	PropertyType* FindPropertyChecked(const UClass* Class, const TCHAR* PropertyName)
+	{
+		PropertyType* Property = FindFProperty<PropertyType>(Class, PropertyName);
+		check(Property);
+		return Property;
+	}
+
+	template <typename EnumType>
+	void SetEnumProperty(UObject& Object, const TCHAR* PropertyName, EnumType Value)
+	{
+		FEnumProperty* Property = FindPropertyChecked<FEnumProperty>(Object.GetClass(), PropertyName);
+		Property->GetUnderlyingProperty()->SetIntPropertyValue(
+			Property->ContainerPtrToValuePtr<void>(&Object), static_cast<int64>(Value));
+	}
+
+	void SetIntProperty(UObject& Object, const TCHAR* PropertyName, int32 Value)
+	{
+		FindPropertyChecked<FIntProperty>(Object.GetClass(), PropertyName)->SetPropertyValue_InContainer(&Object, Value);
+	}
+
+	void SetFloatProperty(UObject& Object, const TCHAR* PropertyName, float Value)
+	{
+		FindPropertyChecked<FFloatProperty>(Object.GetClass(), PropertyName)->SetPropertyValue_InContainer(&Object, Value);
+	}
+
+	void SetBoolProperty(UObject& Object, const TCHAR* PropertyName, bool bValue)
+	{
+		FindPropertyChecked<FBoolProperty>(Object.GetClass(), PropertyName)->SetPropertyValue_InContainer(
+			&Object, bValue);
+	}
+
+	UNotoItemDefinition* MakeInternalFirearm(const TCHAR* Name, ENotoItemType ItemType, float FireInterval)
+	{
+		UNotoItemDefinition* Definition = NewObject<UNotoItemDefinition>(GetTransientPackage(), FName(Name));
+		SetEnumProperty(*Definition, TEXT("ItemType"), ItemType);
+		SetEnumProperty(*Definition, TEXT("AmmoFeedType"), ENotoAmmoFeedType::Internal);
+		SetIntProperty(*Definition, TEXT("InternalCapacity"), 10);
+		SetBoolProperty(*Definition, TEXT("bFirearm"), true);
+		SetFloatProperty(*Definition, TEXT("FireInterval"), FireInterval);
+		SetFloatProperty(*Definition, TEXT("GunfireNoiseRange"), 0.0f);
+		return Definition;
+	}
+
 	struct FTestWorld
 	{
 		FTestWorld()
@@ -111,6 +161,17 @@ bool FNotoGasDamageAndDeathTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
+	const FProperty* HealthProperty = FindFProperty<FProperty>(UNotoHealthSet::StaticClass(), TEXT("Health"));
+	const FProperty* MaxHealthProperty = FindFProperty<FProperty>(UNotoHealthSet::StaticClass(), TEXT("MaxHealth"));
+	TestTrue(TEXT("Health is a replicated attribute"), HealthProperty && HealthProperty->HasAnyPropertyFlags(CPF_Net));
+	TestTrue(TEXT("MaxHealth is a replicated attribute"),
+	         MaxHealthProperty && MaxHealthProperty->HasAnyPropertyFlags(CPF_Net));
+	TestEqual(TEXT("Health uses its replication notification"),
+	          HealthProperty ? HealthProperty->RepNotifyFunc : NAME_None,
+	          FName(TEXT("OnRep_Health")));
+	TestEqual(TEXT("MaxHealth uses its replication notification"),
+	          MaxHealthProperty ? MaxHealthProperty->RepNotifyFunc : NAME_None,
+	          FName(TEXT("OnRep_MaxHealth")));
 
 	FNotoDamageEvent LastDamageEvent;
 	const FDelegateHandle DamageHandle = TargetHealthSet->OnDamageReceived().AddLambda(
@@ -141,6 +202,51 @@ bool FNotoGasDamageAndDeathTest::RunTest(const FString& Parameters)
 		Target->GetAbilitySystemComponent()->HasMatchingGameplayTag(NotoGameplayTags::State_Dead));
 
 	TargetHealthSet->OnDamageReceived().Remove(DamageHandle);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(
+	FNotoFirearmPerItemCooldownTest,
+	"NoTomorrow.Combat.Firearm.PerItemCooldown",
+	EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+
+bool FNotoFirearmPerItemCooldownTest::RunTest(const FString& Parameters)
+{
+	using namespace NotoCombatTests;
+
+	FTestWorld TestWorld;
+	ANotoPlayerState* PlayerState = TestWorld.World->SpawnActor<ANotoPlayerState>();
+	ANotoCharacter* Character = TestWorld.World->SpawnActor<ANotoCharacter>();
+	TestNotNull(TEXT("PlayerState spawned"), PlayerState);
+	TestNotNull(TEXT("Character spawned"), Character);
+	if (!PlayerState || !Character)
+	{
+		return false;
+	}
+
+	Character->SetPlayerState(PlayerState);
+	PlayerState->GetAbilitySystemComponent()->InitAbilityActorInfo(PlayerState, Character);
+	UNotoInventoryComponent* Inventory = PlayerState->GetInventoryComponent();
+	UNotoFirearmComponent* Firearm = Character->GetFirearmComponent();
+	UNotoItemDefinition* MainWeapon = MakeInternalFirearm(TEXT("CooldownMainWeapon"), ENotoItemType::MainWeapon, 1.0f);
+	UNotoItemDefinition* SecondaryWeapon = MakeInternalFirearm(
+		TEXT("CooldownSecondaryWeapon"), ENotoItemType::SecondaryWeapon, 0.1f);
+
+	FGuid MainWeaponId;
+	FGuid SecondaryWeaponId;
+	TestTrue(TEXT("Main weapon is added"), Inventory->AddItem(MainWeapon, 1, -1, MainWeaponId));
+	TestTrue(TEXT("Secondary weapon is added"), Inventory->AddItem(SecondaryWeapon, 1, -1, SecondaryWeaponId));
+	TestTrue(TEXT("Main weapon equips"),
+	         Inventory->EquipItem(MainWeaponId, ENotoEquipmentSlot::MainWeapon, false));
+	TestTrue(TEXT("Secondary weapon equips"),
+	         Inventory->EquipItem(SecondaryWeaponId, ENotoEquipmentSlot::SecondaryWeapon, false));
+	TestTrue(TEXT("Main weapon becomes active"), Inventory->SetActiveSlot(ENotoEquipmentSlot::MainWeapon));
+	TestTrue(TEXT("Main weapon fires"), Firearm->TryFire());
+
+	TestTrue(TEXT("Secondary weapon becomes active"), Inventory->SetActiveSlot(ENotoEquipmentSlot::SecondaryWeapon));
+	TestTrue(TEXT("A different weapon is not blocked by the main weapon cooldown"), Firearm->TryFire());
+	TestTrue(TEXT("Main weapon becomes active again"), Inventory->SetActiveSlot(ENotoEquipmentSlot::MainWeapon));
+	TestFalse(TEXT("The original weapon retains its own cooldown"), Firearm->TryFire());
 	return true;
 }
 

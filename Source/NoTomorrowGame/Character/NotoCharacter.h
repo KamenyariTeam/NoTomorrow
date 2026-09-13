@@ -9,6 +9,7 @@
 class UInputComponent;
 class UGameplayCameraComponent;
 class UNotoFirearmComponent;
+class UNotoEquippedItemComponent;
 class UNotoHealthComponent;
 class UNotoInteractionComponent;
 class UNotoPlayerPawnComponent;
@@ -38,6 +39,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Noto|Weapon")
 	UNotoFirearmComponent* GetFirearmComponent() const { return FirearmComponent; }
 
+	UFUNCTION(BlueprintPure, Category = "Noto|Weapon")
+	UNotoEquippedItemComponent* GetEquippedItemComponent() const { return EquippedItemComponent; }
+
 protected:
 	void InitializeAbilitySystem();
 	void UninitializeAbilitySystem();
@@ -53,6 +57,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Weapon", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UNotoFirearmComponent> FirearmComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Weapon", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoEquippedItemComponent> EquippedItemComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UNotoPlayerPawnComponent> PlayerPawnComponent;

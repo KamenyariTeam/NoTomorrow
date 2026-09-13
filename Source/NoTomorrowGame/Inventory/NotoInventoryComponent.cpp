@@ -856,6 +856,7 @@ bool UNotoInventoryComponent::ResolveItemDefinitions()
 	if (bAnyDefinitionChanged)
 	{
 		MarkInventoryDirty();
+		MarkEquipmentDirty();
 	}
 	return bAllResolved;
 }

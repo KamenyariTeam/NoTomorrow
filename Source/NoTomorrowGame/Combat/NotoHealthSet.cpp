@@ -4,6 +4,7 @@
 
 #include "Development/NotoGameplayTags.h"
 #include "GameplayEffectExtension.h"
+#include "Net/UnrealNetwork.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(NotoHealthSet)
 
@@ -11,6 +12,39 @@ UNotoHealthSet::UNotoHealthSet()
 {
 	InitMaxHealth(100.0f);
 	InitHealth(100.0f);
+}
+
+void UNotoHealthSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME_CONDITION_NOTIFY(UNotoHealthSet, Health, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UNotoHealthSet, MaxHealth, COND_None, REPNOTIFY_Always);
+}
+
+void UNotoHealthSet::OnRep_Health(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UNotoHealthSet, Health, OldValue);
+
+	const float PreviousHealth = OldValue.GetCurrentValue();
+	const float NewHealth = GetHealth();
+	if (NewHealth >= PreviousHealth)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* AbilitySystem = GetOwningAbilitySystemComponent();
+	FNotoDamageEvent Event;
+	Event.Target = AbilitySystem ? AbilitySystem->GetAvatarActor() : GetOwningActor();
+	Event.Damage = PreviousHealth - NewHealth;
+	Event.PreviousHealth = PreviousHealth;
+	Event.NewHealth = NewHealth;
+	DamageReceived.Broadcast(Event);
+}
+
+void UNotoHealthSet::OnRep_MaxHealth(const FGameplayAttributeData& OldValue)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UNotoHealthSet, MaxHealth, OldValue);
 }
 
 void UNotoHealthSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
@@ -66,7 +100,10 @@ void UNotoHealthSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackD
 
 	if (AbilitySystem && NewHealth <= 0.0f)
 	{
-		AbilitySystem->AddLooseGameplayTag(NotoGameplayTags::State_Dead);
+		const EGameplayTagReplicationState ReplicationState = AbilitySystem->GetOwnerRole() == ROLE_Authority
+			                                                      ? EGameplayTagReplicationState::TagOnly
+			                                                      : EGameplayTagReplicationState::None;
+		AbilitySystem->SetLooseGameplayTagCount(NotoGameplayTags::State_Dead, 1, ReplicationState);
 	}
 	DamageReceived.Broadcast(Event);
 }

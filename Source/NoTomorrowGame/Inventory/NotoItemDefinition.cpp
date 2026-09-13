@@ -2,6 +2,8 @@
 
 #include "Inventory/NotoItemDefinition.h"
 
+#include "Character/NotoEquippedItemActor.h"
+
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
@@ -23,6 +25,14 @@ bool UNotoItemDefinition::UsesInternalAmmo() const
 {
 	const bool bWeapon = ItemType == ENotoItemType::MainWeapon || ItemType == ENotoItemType::SecondaryWeapon;
 	return bWeapon && AmmoFeedType == ENotoAmmoFeedType::Internal;
+}
+
+const FNotoEquippedItemAnimation* UNotoItemDefinition::FindEquippedAnimation(FGameplayTag ActionTag) const
+{
+	return EquippedAnimations.FindByPredicate([ActionTag](const FNotoEquippedItemAnimation& Animation)
+	{
+		return Animation.ActionTag == ActionTag;
+	});
 }
 
 #if WITH_EDITOR
@@ -102,6 +112,21 @@ EDataValidationResult UNotoItemDefinition::IsDataValid(FDataValidationContext& C
 	if (MaxStackSize < 1)
 	{
 		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidStackSize", "MaxStackSize must be at least one."));
+	}
+	if (EquippedActorClass && EquippedSocketName.IsNone())
+	{
+		AddError(NSLOCTEXT("NotoItemDefinition", "PresentationWithoutSocket",
+		                   "An equipped item actor requires an attachment socket name."));
+	}
+	TSet<FGameplayTag> AnimationTags;
+	for (const FNotoEquippedItemAnimation& Animation : EquippedAnimations)
+	{
+		if (!EquippedActorClass || !Animation.ActionTag.IsValid() || AnimationTags.Contains(Animation.ActionTag))
+		{
+			AddError(NSLOCTEXT("NotoItemDefinition", "InvalidEquippedAnimation",
+			                   "Equipped animations require an equipped actor class and a unique action tag."));
+		}
+		AnimationTags.Add(Animation.ActionTag);
 	}
 
 	return Result;

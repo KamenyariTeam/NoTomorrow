@@ -276,11 +276,20 @@ bool FNotoInventoryDefinitionResolutionTest::RunTest(const FString& Parameters)
 
 	UNotoInventoryComponent* Inventory = NewObject<UNotoInventoryComponent>();
 	const FGuid ItemInstanceId = Add(*Inventory, *Definition, 1);
+	TestTrue(TEXT("Resolved item can be equipped"),
+	         Inventory->EquipItem(ItemInstanceId, ENotoEquipmentSlot::Tool1, false));
 	ClearFirstItemDefinition(*Inventory);
 	FNotoItemInstance Item;
 	TestTrue(TEXT("Saved item remains addressable while unresolved"), Inventory->GetItem(ItemInstanceId, Item));
 	TestNull(TEXT("Runtime definition starts unresolved"), Item.Definition.Get());
+
+	UNotoInventoryTestListener* Listener = NewObject<UNotoInventoryTestListener>();
+	Listener->Initialize(Inventory);
+	Inventory->OnInventoryChanged.AddDynamic(Listener, &UNotoInventoryTestListener::HandleInventoryChanged);
+	Inventory->OnEquipmentChanged.AddDynamic(Listener, &UNotoInventoryTestListener::HandleEquipmentChanged);
 	TestTrue(TEXT("Definition ids resolve after load"), Inventory->ResolveItemDefinitions());
+	TestEqual(TEXT("Definition resolution emits one inventory callback"), Listener->InventoryChangedCount, 1);
+	TestEqual(TEXT("Definition resolution refreshes equipped presentation"), Listener->EquipmentChangedCount, 1);
 	TestTrue(TEXT("Resolved item remains addressable"), Inventory->GetItem(ItemInstanceId, Item));
 	TestEqual(TEXT("Resolved definition matches authored asset"), Item.Definition.Get(), Definition);
 	return true;

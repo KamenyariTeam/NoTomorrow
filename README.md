@@ -2,79 +2,46 @@
 
 No Tomorrow is an early-stage top-down immersive sim about planning and executing heists in a collapsing world.
 
-The project currently concentrates on a small, durable gameplay foundation. Heists, anomalies, systemic interactions, branching narrative, and possible future co-op remain design goals rather than completed features.
-
-## Current technical foundation
-
-- `NoTomorrowGame`: the single project runtime module, containing the modular game framework classes, a PlayerState-owned Gameplay Ability System, semantic Enhanced Input bindings, cursor aiming, nearby cursor-selected interactions, gameplay tags, and Gameplay Cameras integration.
-- `Plugins/ModularGameplayActors`: reusable modular actor, pawn, character, controller, GameMode, and GameState bases aligned with Epic's Modular Gameplay actors.
-- Native Unreal configuration installs the default input mapping context and software cursor; concrete pawn, game-mode, input, camera, cursor, and map data lives in project assets.
-- Common UI, Game Features, Modular Gameplay, Gameplay Abilities, Enhanced Input, Gameplay Tags, and Gameplay Cameras remain enabled engine integrations. Game Features are available for features that eventually need independent activation, not ordinary project composition.
-
-C++ owns engine-facing foundations and lifecycle behavior. Blueprints and data assets configure concrete game classes and authored data.
-
-## Interaction setup
-
-`ANotoCharacter` owns the local interaction range. It selects an `INotoInteractable` inside that range by its screen distance to the gameplay cursor, marks it through `SetInteractionHighlighted`, and calls `Interact` only on that selected target. Derive doors, loot, pickups, and other world objects from `ANotoInteractableActor` (or implement `INotoInteractable`) and use the actor's query-only `InteractionVolume` for range detection.
-
-`IA_Interact`, `IA_InteractModified`, and `IA_Drop` are registered in `DA_InputConfig_Player`; `IA_Drop` is mapped to `R` in `IMC_Player_Default`. The interaction modifier uses Enhanced Input chord actions and initially maps to Alt. Pickup always uses the normal equipment collection rules; the modified interaction preserves the current active slot. `UNotoPlayerPawnComponent::SetPickupActiveSlotModifierReversed` is ready for a future user setting that reverses that behavior. Place `ANotoTestPickup` in a level to verify the path; it writes custom depth and destroys itself when interacted with. A post-process material that renders Custom Depth as a white outline is required for the visible outline.
-
-### Inventory debugging
-
-The non-shipping `UNotoCheatManager` provides lightweight console commands for testing inventory behavior without a UI:
-
-```text
-NotoInventoryDump
-NotoInventoryDebug
-NotoInventoryGive /Game/Items/DA_TestTool.DA_TestTool 1 -1
-NotoInventoryDropActive 1
-NotoInventorySetActiveSlot 7
-```
-
-`NotoInventoryGive` takes an item-definition path and optional quantity and loaded-ammo values. Weapons carry their loaded ammo directly; picking up a matching weapon transfers only the rounds that fit and leaves any remainder in the pickup. `NotoInventorySetActiveSlot` uses `0`–`7` (`0` none, `1` main weapon, `2` secondary weapon, `3`–`7` tools).
+The current project is a gameplay foundation rather than a complete game. It includes character control and cursor aiming, interaction, inventory and physical ammunition, equipped-item presentation, hitscan combat, GAS-based health and damage, Common UI integration, and Gameplay Cameras.
 
 ## Requirements
 
-- Unreal Engine 5.8, using the Engine build associated with `NoTomorrow.uproject`.
-- JetBrains Rider with Unreal Engine support (primary IDE workflow).
-- A compatible Windows C++ toolchain: MSVC, Windows SDK, and Unreal's required C++ components.
-- Git LFS for binary Unreal and source-art files.
+- Unreal Engine 5.8 using the Engine associated with `NoTomorrow.uproject`
+- JetBrains Rider with Unreal Engine support
+- A compatible Windows C++ toolchain
+- Git LFS
 
-## Open and build with Rider
+## Quick start
 
-1. Clone the repository and run `git lfs install` and `git lfs pull`.
-2. Open `NoTomorrow.uproject` in Rider. Select or register the associated Unreal Engine 5.8 build when prompted.
-3. Let Rider index the project, then select `NoTomorrowEditor`, `Development Editor`, and `Win64`.
-4. Build and run the Editor. Use Play In Editor for normal iteration.
+1. Clone the repository.
+2. Install Git LFS and fetch binary assets:
 
-Generated solution and project files are local output. Regenerate them through Rider or Unreal when required.
+   ```powershell
+   git lfs install
+   git lfs pull
+   ```
 
-### Command-line build
+3. Open `NoTomorrow.uproject` in Rider.
+4. Select `NoTomorrowEditor`, `Development Editor`, and `Win64`.
+5. Build and run the editor, then use Play In Editor.
 
-Set `UE_ROOT` to the Engine root that owns `Engine/Build/BatchFiles/Build.bat`, then run from the repository root:
+Generated solutions and project files are local output and should not be committed.
+
+## Command-line build and tests
+
+Set `UE_ROOT` to the associated Engine root, then run:
 
 ```powershell
-& "$env:UE_ROOT\Engine\Build\BatchFiles\Build.bat" NoTomorrowEditor Win64 Development -Project="$PWD\NoTomorrow.uproject" -WaitMutex
+& "$env:UE_ROOT\Engine\Build\BatchFiles\Build.bat" NoTomorrowEditor Win64 Development -Project="$PWD\NoTomorrow.uproject" -WaitMutex -NoHotReloadFromIDE
+
+& "$env:UE_ROOT\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "$PWD\NoTomorrow.uproject" -unattended -nop4 -NullRHI -nosplash -stdout -FullStdOutLogOutput '-ExecCmds=Automation RunTests NoTomorrow' '-TestExit=Automation Test Queue Empty'
 ```
 
-Do not copy another developer's absolute Engine path. Rider's Engine association or the local `.uproject` registration is authoritative.
+## Contributing
 
-## Important folders
+- Keep reusable gameplay and engine integration in C++; use Blueprints and assets for concrete content, composition, presentation, and tuning.
+- Preserve unrelated work and keep changes focused.
+- Do not commit generated Unreal or IDE output.
+- Build affected C++ and run relevant automation tests before submitting changes.
 
-| Path | Purpose |
-| --- | --- |
-| `Source/NoTomorrowGame/` | Runtime character, input, player, game-mode, and shared development foundations |
-| `Plugins/ModularGameplayActors/` | Reusable Modular Gameplay actor bases |
-| `Config/` | Engine, game, input, gameplay-tag, and asset-manager configuration |
-| `Content/Characters/` | Character Blueprints and Gameplay Cameras assets |
-| `Content/Input/` | Enhanced Input actions, mapping context, and tagged input config |
-| `Content/Maps/` | Playable and development maps |
-| `Content/UI/` | Cursor and UI assets |
-
-`Binaries/`, `DerivedDataCache/`, `Intermediate/`, `Saved/`, `.idea/`, `.vs/`, and generated solution/project files are local output; do not edit or commit them.
-
-## Naming
-
-Use Unreal-style asset prefixes such as `BP_`, `W_`, `DA_`, `IA_`, `IMC_`, `T_`, `M_`, `MI_`, `SM_`, and `SK_`. C++ follows Unreal type prefixes and keeps `Noto` for game-specific public type families. Reusable plugin types use their plugin domain instead.
-
-For coding-agent guidance and architectural boundaries, see `AGENTS.md` and `.agents/documents/`.
+See [AGENTS.md](AGENTS.md) for repository instructions used by coding agents and [.agents/documents/architecture.md](.agents/documents/architecture.md) for current system ownership.

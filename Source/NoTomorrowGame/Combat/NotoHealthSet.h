@@ -65,10 +65,16 @@ public:
 	FNotoDamageReceivedNative& OnDamageReceived() const { return DamageReceived; }
 
 private:
-	UPROPERTY(BlueprintReadOnly, Category = "Noto|Health", Meta = (AllowPrivateAccess = "true"))
+	UFUNCTION()
+	void OnRep_Health(const FGameplayAttributeData& OldValue);
+
+	UFUNCTION()
+	void OnRep_MaxHealth(const FGameplayAttributeData& OldValue);
+
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_Health, Category = "Noto|Health", Meta = (AllowPrivateAccess = "true"))
 	FGameplayAttributeData Health;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Noto|Health", Meta = (AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadOnly, ReplicatedUsing = OnRep_MaxHealth, Category = "Noto|Health", Meta = (AllowPrivateAccess = "true"))
 	FGameplayAttributeData MaxHealth;
 
 	/** Meta attribute consumed immediately by PostGameplayEffectExecute. */

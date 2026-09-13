@@ -1,91 +1,67 @@
-# No Tomorrow agent guide
+# No Tomorrow agent instructions
 
-## Project summary
+## Scope
 
-No Tomorrow is an early-stage, single-player-first top-down immersive-sim project for Unreal Engine 5.8. `NoTomorrowGame` is the runtime module and `NoTomorrowEditor` contains editor-only extensions. The project uses Enhanced Input, Common UI, Gameplay Tags, Game Features, Modular Gameplay, the local `GameplayCore` plugin (gameplay experiences and tagged events), the local `ModularGameplayActors` plugin, and `unreal-mcp` for direct interaction with the Unreal Editor when editor-authored content needs to be inspected or changed.
+No Tomorrow is an early-stage, single-player-first top-down immersive sim built with Unreal Engine 5.8. The repository currently contains one project runtime module, `NoTomorrowGame`, and the local `ModularGameplayActors` runtime plugin. `NoTomorrowEditor` is a build target, not an editor module.
 
-C++ is the preferred home for reusable gameplay logic, runtime foundations, engine integrations, modular actor bases, input plumbing, asset/experience loading, and editor extensions. Blueprints and assets should handle concrete game classes, composition, per-asset configuration, tuning, presentation, maps, and other content-authoring tasks where Unreal's editor workflow is the better fit.
-
-Do not choose Blueprint merely because Unreal MCP can edit it, and do not choose C++ merely to avoid an editor-authored change. Put behavior in the layer that best matches its ownership, reuse, complexity, and authoring needs.
-
-Treat planned game concepts in prose as plans unless code, assets, Blueprint graphs, project settings, or editor state confirm them.
+Treat features described only in prose as plans until code, config, assets, or live editor state confirms them.
 
 ## Sources of truth
 
-Use this priority when facts disagree:
+Use this order when information conflicts:
 
-1. Code, `.uproject`, module rules, plugin descriptors, config, and authored Unreal assets/Blueprints.
-2. Relevant Unreal Editor state when direct inspection is needed.
-3. Project agent documentation in this file and `.agents/documents/`.
-4. `README.md` and other human-facing documentation.
-5. Assumptions.
+1. C++, `.uproject`, module rules, plugin descriptors, config, and authored Unreal assets.
+2. Relevant Unreal Editor state.
+3. `.agents/documents/architecture.md` and `.agents/documents/cpp-style.md`.
+4. `README.md`.
 
-Verify behavior in the source that owns it. Inspect C++ for code-owned systems and inspect the relevant Blueprint or asset for content-authored behavior. When stale documentation is within the task's scope, update it; otherwise call out the mismatch.
+Update stale documentation when it is part of the requested change. Otherwise report the mismatch.
 
-## Choosing C++ vs Blueprint/assets
+## Ownership boundaries
 
-Use C++ by default when the behavior is part of the project's reusable gameplay or technical foundation. In particular, prefer C++ for:
+- Put reusable gameplay logic, lifecycle handling, engine integration, components, and editor extensions in C++.
+- Use Blueprints and assets for concrete classes, composition, defaults, maps, presentation, cameras, input assets, effects, and tuning.
+- Keep persistent player state on `ANotoPlayerState`; keep avatar-specific input and presentation on the possessed pawn or controller.
+- Keep immutable authored item data in `UNotoItemDefinition` and mutable item state in inventory item instances.
+- Treat equipment actors as presentation. Inventory and gameplay components own gameplay state.
+- Keep local input and presentation separate from authoritative gameplay state so future co-op does not require an architectural rewrite.
+- Use current, native Unreal Engine facilities and plugins when they provide a clear correctness, performance, workflow, or future-maintenance advantage. Prefer measured optimization and established engine patterns over speculative complexity or custom replacements.
 
-- reusable gameplay logic and APIs;
-- base classes, components, subsystems, and shared systems;
-- engine or plugin integration;
-- logic that benefits from strong typing, code review, testing, or broad reuse;
-- performance-sensitive or structurally complex runtime behavior;
-- editor extensions and tooling implemented as code.
+Read `.agents/documents/architecture.md` before changing a system boundary. Read `.agents/documents/cpp-style.md` before significant C++ additions or refactors.
 
-Use Blueprints/assets when Unreal's authored-content workflow provides a real advantage. In particular, prefer them for:
+## Unreal assets
 
-- concrete subclasses and content-specific assembly;
-- component composition and per-class defaults;
-- Data Assets and other data-driven configuration;
-- input/camera/content wiring;
-- maps, placed actors, experiences, cursors, presentation, VFX/audio hooks, and tuning;
-- simple game-specific orchestration that is clearer and faster to author visually than as reusable C++.
-
-When both layers are appropriate, keep the reusable contract and core behavior in C++, expose only the API needed by content, and perform the concrete wiring/configuration in Blueprint or assets.
-
-Avoid two opposite failure modes:
-
-- Do not add unnecessary C++ plumbing just to avoid making an appropriate Blueprint or asset edit.
-- Do not move reusable or architectural logic into Blueprint just because direct editor access makes that possible.
-
-Follow nearby project patterns when the correct ownership is not obvious.
-
-## Unreal Editor access
-
-The agent can use Unreal MCP to inspect and modify supported editor-authored content directly. Treat it as tooling for carrying out the chosen architecture, not as a reason to prefer editor-authored solutions.
-
-- Inspect relevant Blueprints/assets before changing them when their current structure matters.
-- The agent may create or modify supported Blueprints, defaults, components, graphs, Data Assets, input assets, maps, actors, settings, and other editor-authored content when the requested change is clear.
-- Keep Blueprint graph changes small, readable, and consistent with existing conventions. Reuse existing functions/macros and avoid unrelated graph cleanup.
-- Save intended asset changes and compile modified Blueprints when that validation is available.
-- Do not directly binary-patch `.uasset` or `.umap` files. Use Unreal Editor or another Unreal-aware tool.
-- If the available editor tooling cannot perform a required authored change reliably, state the exact missing operation rather than changing the architecture solely to work around the tooling limitation.
-- Be deliberate with destructive asset operations such as deleting, renaming, moving, replacing, or reparenting because they can affect references.
+- Inspect relevant assets before changing them when their current structure matters.
+- Use Unreal Editor or other Unreal-aware tooling for `.uasset` and `.umap` changes; never binary-patch them.
+- Compile modified Blueprints, save intended assets, and verify important references/defaults when tooling supports it.
+- Ask before destructive asset moves, renames, deletes, replacements, or reparenting.
+- If tooling cannot perform a required asset edit reliably, report the missing operation instead of moving appropriate authored behavior into C++.
 
 ## Working rules
 
-- Inspect nearby code and relevant assets before introducing a pattern. Make the smallest coherent, reviewable change that solves the task.
-- Preserve unrelated edits. Avoid broad cleanup, mass renaming, whole-file reformatting, bulk asset moves, and speculative abstractions.
-- Explain assumptions that cannot be verified. Ask before adding a significant dependency, plugin, module, or architectural layer.
-- Do not edit generated Unreal files or local output: `Binaries/`, `DerivedDataCache/`, `Intermediate/`, `Saved/`, IDE metadata, solution/project files generated by Unreal, or plugin equivalents.
-- Update documentation when a public workflow or architectural boundary changes.
-- Review the final source diff and the set of modified Unreal assets before finishing.
-- Before significant C++ additions or refactors, read `.agents/documents/cpp-style.md`.
-- Before adding a subsystem, module, plugin, replicated system, or cross-feature dependency, read `.agents/documents/architecture.md`.
-- The two supporting documents are not required for trivial Markdown-only edits or straightforward content configuration that does not alter architecture.
+- Inspect nearby code and assets before introducing a pattern. Make the smallest coherent change.
+- Preserve unrelated and pre-existing edits. Do not reformat or clean up files outside the task.
+- Do not edit generated or local output: `Binaries/`, `DerivedDataCache/`, `Intermediate/`, `Saved/`, IDE metadata, generated solutions/project files, or plugin equivalents.
+- Do not hardcode an Engine installation path. Use Rider's associated Engine or `UE_ROOT`.
+- Keep runtime code independent of editor-only modules. Reusable plugins must not depend on `NoTomorrowGame`.
+- Disable Tick unless behavior genuinely requires per-frame work.
+- Prefer existing Unreal systems and project patterns over custom abstractions or new dependencies.
 
 ## Validation
 
-Choose validation proportional to the change:
+Run checks proportional to the change:
 
-- Inspect the final source diff and run `git diff --check` for text/source changes.
-- Parse or otherwise validate modified JSON, INI, TOML, Markdown, and scripts where tooling exists.
-- Compile the affected Unreal module or the `NoTomorrowEditor` target when C++ changed and the local Engine/toolchain are available.
-- Compile modified Blueprints when supported and check for errors or warnings introduced by the change.
-- For modified assets or maps, verify important references/defaults/placements and save the assets.
-- Run relevant Unreal automation tests when they exist.
-- Use PIE or another in-editor check when it materially increases confidence in gameplay behavior.
-- Report exactly what was changed, what validation was run, what passed or failed, and what was not validated.
+- Text/source: inspect the final diff and run `git diff --check`.
+- C++: build the affected target and run relevant automation tests. If editor is running, close it before building.
+- Blueprints: compile modified Blueprints and inspect introduced warnings/errors.
+- Assets/maps: verify references, defaults, and placements; use PIE when it materially increases confidence.
 
-Never hardcode a developer's Engine installation path. Use Rider's configured Unreal Engine, the `.uproject` association, or a documented variable such as `UE_ROOT`.
+From PowerShell at the repository root:
+
+```powershell
+& "$env:UE_ROOT\Engine\Build\BatchFiles\Build.bat" NoTomorrowEditor Win64 Development -Project="$PWD\NoTomorrow.uproject" -WaitMutex -NoHotReloadFromIDE
+
+& "$env:UE_ROOT\Engine\Binaries\Win64\UnrealEditor-Cmd.exe" "$PWD\NoTomorrow.uproject" -unattended -nop4 -NullRHI -nosplash -stdout -FullStdOutLogOutput '-ExecCmds=Automation RunTests NoTomorrow' '-TestExit=Automation Test Queue Empty'
+```
+
+Report what passed, failed, or was not run.

@@ -36,12 +36,16 @@ void UNotoHealthComponent::InitializeWithAbilitySystem(UAbilitySystemComponent* 
 
 	AbilitySystem = InAbilitySystem;
 	HealthSet = const_cast<UNotoHealthSet*>(FoundHealthSet);
-	if (!bHealthInitialized)
+	const AActor* AbilityOwner = InAbilitySystem->GetOwnerActor();
+	if (!bHealthInitialized && AbilityOwner && AbilityOwner->HasAuthority())
 	{
 		const float MaxHealth = FMath::Max(1.0f, InitialMaxHealth);
 		InAbilitySystem->SetNumericAttributeBase(UNotoHealthSet::GetMaxHealthAttribute(), MaxHealth);
 		InAbilitySystem->SetNumericAttributeBase(UNotoHealthSet::GetHealthAttribute(), MaxHealth);
-		InAbilitySystem->RemoveLooseGameplayTag(NotoGameplayTags::State_Dead);
+		InAbilitySystem->SetLooseGameplayTagCount(
+			NotoGameplayTags::State_Dead,
+			0,
+			EGameplayTagReplicationState::TagOnly);
 		bHealthInitialized = true;
 	}
 

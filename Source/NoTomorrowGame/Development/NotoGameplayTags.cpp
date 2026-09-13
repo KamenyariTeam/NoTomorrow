@@ -23,6 +23,10 @@ namespace NotoGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Magazine_Heavy, "Ammo.Magazine.Heavy", "Standard heavy detachable magazine family.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ammo_Shell, "Ammo.Shell", "Loose shell ammunition family.");
 
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ItemAction_Equip, "Item.Action.Equip", "An item became active in the character's hands.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ItemAction_Fire, "Item.Action.Fire", "The active firearm fired successfully.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(ItemAction_Reload, "Item.Action.Reload", "The active firearm reloaded successfully.");
+
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "Set-by-caller damage magnitude.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dead, "State.Dead", "Actor health has reached zero.");
 }

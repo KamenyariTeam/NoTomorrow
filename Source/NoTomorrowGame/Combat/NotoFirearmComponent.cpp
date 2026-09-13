@@ -4,6 +4,7 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
+#include "Character/NotoEquippedItemComponent.h"
 #include "Combat/NotoDamageEffect.h"
 #include "Development/NotoGameplayTags.h"
 #include "DrawDebugHelpers.h"
@@ -53,12 +54,13 @@ bool UNotoFirearmComponent::TryFire()
 	}
 
 	const double CurrentTime = World->GetTimeSeconds();
-	if (CurrentTime < NextAllowedFireTime
+	const double* NextAllowedFireTime = NextAllowedFireTimes.Find(Weapon.InstanceId);
+	if ((NextAllowedFireTime && CurrentTime < *NextAllowedFireTime)
 		|| !Inventory->ConsumeLoadedAmmo(Weapon.InstanceId, Weapon.Definition->GetAmmoPerShot()))
 	{
 		return false;
 	}
-	NextAllowedFireTime = CurrentTime + Weapon.Definition->GetFireInterval();
+	NextAllowedFireTimes.FindOrAdd(Weapon.InstanceId) = CurrentTime + Weapon.Definition->GetFireInterval();
 
 	const FVector TraceStart = Pawn->GetActorLocation()
 		+ FVector::UpVector * Weapon.Definition->GetFirearmTraceHeight();
@@ -99,6 +101,10 @@ bool UNotoFirearmComponent::TryFire()
 			Weapon.Definition->GetGunfireNoiseRange(),
 			NotoGameplayTags::NoiseTag_Gunfire.GetTag().GetTagName());
 	}
+	if (UNotoEquippedItemComponent* EquippedItem = Pawn->FindComponentByClass<UNotoEquippedItemComponent>())
+	{
+		EquippedItem->PlayAction(NotoGameplayTags::ItemAction_Fire);
+	}
 	return true;
 }
 
@@ -107,11 +113,19 @@ bool UNotoFirearmComponent::TryReload()
 	UNotoInventoryComponent* Inventory = GetInventory();
 	FNotoItemInstance Weapon;
 	int32 ReloadedRounds = 0;
-	return Inventory
+	const bool bReloaded = Inventory
 		&& Inventory->GetActiveItem(Weapon)
 		&& Weapon.Definition
 		&& Weapon.Definition->IsFirearm()
 		&& Inventory->ReloadItem(Weapon.InstanceId, ReloadedRounds);
+	if (bReloaded)
+	{
+		if (UNotoEquippedItemComponent* EquippedItem = GetOwner()->FindComponentByClass<UNotoEquippedItemComponent>())
+		{
+			EquippedItem->PlayAction(NotoGameplayTags::ItemAction_Reload);
+		}
+	}
+	return bReloaded;
 }
 
 UNotoInventoryComponent* UNotoFirearmComponent::GetInventory() const

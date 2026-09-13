@@ -5,9 +5,27 @@
 #include "Engine/DataAsset.h"
 #include "Engine/EngineTypes.h"
 #include "GameplayTagContainer.h"
+#include "Character/NotoEquippedItemActor.h"
 #include "NotoItemDefinition.generated.h"
 
 class UStaticMesh;
+class UAnimMontage;
+
+/** Presentation montages selected by an item action tag such as equip, fire, reload, or tool use. */
+USTRUCT(BlueprintType)
+struct NOTOMORROWGAME_API FNotoEquippedItemAnimation
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Meta = (Categories = "Item.Action"))
+	FGameplayTag ActionTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UAnimMontage> CharacterMontage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TObjectPtr<UAnimMontage> ItemMontage;
+};
 
 /** Broad gameplay role of an item. Specific weapon and tool families belong in ItemTags. */
 UENUM(BlueprintType)
@@ -104,6 +122,11 @@ public:
 
 	UStaticMesh* GetWorldMesh() const { return WorldMesh; }
 
+	TSubclassOf<ANotoEquippedItemActor> GetEquippedActorClass() const { return EquippedActorClass; }
+	FName GetEquippedSocketName() const { return EquippedSocketName; }
+	FTransform GetEquippedRelativeTransform() const { return EquippedRelativeTransform; }
+	const FNotoEquippedItemAnimation* FindEquippedAnimation(FGameplayTag ActionTag) const;
+
 #if WITH_EDITOR
 	virtual EDataValidationResult IsDataValid(class FDataValidationContext& Context) const override;
 #endif
@@ -181,4 +204,20 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "World", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMesh> WorldMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
+		Meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<ANotoEquippedItemActor> EquippedActorClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
+		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides))
+	FName EquippedSocketName = TEXT("HandGrip_R");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
+		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides))
+	FTransform EquippedRelativeTransform = FTransform::Identity;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
+		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides, TitleProperty = "ActionTag"))
+	TArray<FNotoEquippedItemAnimation> EquippedAnimations;
 };

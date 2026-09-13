@@ -30,5 +30,5 @@ private:
 	void ApplyDamage(const FHitResult& HitResult, const UNotoItemDefinition& Definition,
 	                 UAbilitySystemComponent& SourceAbilitySystem) const;
 
-	double NextAllowedFireTime = 0.0;
+	TMap<FGuid, double> NextAllowedFireTimes;
 };
