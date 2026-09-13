@@ -36,7 +36,7 @@ private:
 		Meta = (AllowPrivateAccess = "true", ClampMin = "1"))
 	int32 Quantity = 1;
 
-	/** Below zero initializes a magazine, detachable weapon, or internal-feed weapon as full. */
+	/** Below zero initializes an ammunition-using weapon as full. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Noto|Inventory", Meta = (AllowPrivateAccess = "true"))
 	int32 LoadedAmmo = -1;
 

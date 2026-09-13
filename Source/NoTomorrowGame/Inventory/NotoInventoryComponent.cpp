@@ -117,11 +117,9 @@ bool UNotoInventoryComponent::CollectItem(
 	int32 Quantity,
 	int32 LoadedAmmo,
 	FGuid& OutItemInstanceId,
-	int32& OutRemainingLoadedAmmo,
 	bool bMakeCollectedItemActive)
 {
 	OutItemInstanceId.Invalidate();
-	OutRemainingLoadedAmmo = 0;
 	FCollectionPlan Plan;
 	if (!Definition || !BuildCollectionPlan(*Definition, Quantity, Plan))
 	{
@@ -184,8 +182,7 @@ bool UNotoInventoryComponent::CollectItemInstance(
 	return bMakeCollectedItemActive || SetActiveSlot(PreviousActiveSlot);
 }
 
-bool UNotoInventoryComponent::CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity,
-                                             int32 LoadedAmmo) const
+bool UNotoInventoryComponent::CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity) const
 {
 	FCollectionPlan Plan;
 	return Definition && BuildCollectionPlan(*Definition, Quantity, Plan);
@@ -196,8 +193,6 @@ bool UNotoInventoryComponent::CanCollectItemInstance(const FNotoItemInstance& It
 	FCollectionPlan Plan;
 	return IsItemStateValid(ItemInstance)
 		&& !IsInstanceIdInUse(ItemInstance.InstanceId)
-		&& (!ItemInstance.InsertedMagazine.IsValid()
-			|| !IsInstanceIdInUse(ItemInstance.InsertedMagazine.InstanceId))
 		&& BuildCollectionPlan(*ItemInstance.Definition, ItemInstance.Quantity, Plan);
 }
 
@@ -274,27 +269,9 @@ void UNotoInventoryComponent::InitializeItemAmmunition(FNotoItemInstance& Item, 
 {
 	check(Item.Definition);
 	const UNotoItemDefinition& Definition = *Item.Definition;
-	if (Definition.IsMagazine())
+	if (Definition.UsesAmmunition())
 	{
 		Item.LoadedAmmo = ResolveLoadedAmmo(Definition, LoadedAmmo);
-	}
-	else if (Definition.UsesMagazine())
-	{
-		UNotoItemDefinition* MagazineDefinition = Definition.GetStandardMagazineDefinition();
-		if (MagazineDefinition)
-		{
-			Item.InsertedMagazine.InstanceId = FGuid::NewGuid();
-			Item.InsertedMagazine.DefinitionId = MagazineDefinition->GetPrimaryAssetId();
-			Item.InsertedMagazine.Definition = MagazineDefinition;
-			Item.InsertedMagazine.LoadedAmmo = ResolveLoadedAmmo(*MagazineDefinition, LoadedAmmo);
-		}
-	}
-	else if (Definition.UsesInternalAmmo())
-	{
-		Item.LoadedAmmo = FMath::Clamp(
-			LoadedAmmo < 0 ? Definition.GetInternalCapacity() : LoadedAmmo,
-			0,
-			Definition.GetInternalCapacity());
 	}
 }
 
@@ -306,33 +283,18 @@ bool UNotoInventoryComponent::IsItemStateValid(const FNotoItemInstance& Item)
 		return false;
 	}
 
-	if (Item.Definition->IsMagazine())
+	if (Item.Definition->UsesAmmunition())
 	{
-		return Item.LoadedAmmo >= 0 && Item.LoadedAmmo <= Item.Definition->GetMagazineCapacity();
+		return Item.LoadedAmmo >= 0 && Item.LoadedAmmo <= Item.Definition->GetAmmoCapacity();
 	}
-	if (Item.Definition->UsesMagazine())
-	{
-		return Item.InsertedMagazine.IsEmpty()
-			|| (Item.InsertedMagazine.Definition
-				&& Item.InsertedMagazine.InstanceId != Item.InstanceId
-				&& Item.InsertedMagazine.DefinitionId == Item.InsertedMagazine.Definition->GetPrimaryAssetId()
-				&& Item.InsertedMagazine.Definition->IsMagazine()
-				&& Item.InsertedMagazine.Definition->GetAmmoFamily() == Item.Definition->GetAmmoFamily()
-				&& Item.InsertedMagazine.LoadedAmmo >= 0
-				&& Item.InsertedMagazine.LoadedAmmo <= Item.InsertedMagazine.Definition->GetMagazineCapacity());
-	}
-	if (Item.Definition->UsesInternalAmmo())
-	{
-		return Item.LoadedAmmo >= 0 && Item.LoadedAmmo <= Item.Definition->GetInternalCapacity();
-	}
-	return Item.LoadedAmmo == 0 && !Item.InsertedMagazine.IsValid();
+	return Item.LoadedAmmo == 0;
 }
 
 int32 UNotoInventoryComponent::ResolveLoadedAmmo(const UNotoItemDefinition& Definition, int32 LoadedAmmo)
 {
-	return Definition.IsMagazine()
-		       ? FMath::Clamp(LoadedAmmo < 0 ? Definition.GetMagazineCapacity() : LoadedAmmo, 0,
-		                      Definition.GetMagazineCapacity())
+	return Definition.UsesAmmunition()
+		       ? FMath::Clamp(LoadedAmmo < 0 ? Definition.GetAmmoCapacity() : LoadedAmmo, 0,
+		                      Definition.GetAmmoCapacity())
 		       : 0;
 }
 
@@ -490,21 +452,10 @@ bool UNotoInventoryComponent::SetLoadedAmmo(FGuid ItemInstanceId, int32 LoadedAm
 
 	int32* MutableAmmo = nullptr;
 	int32 Capacity = 0;
-	if (Item->Definition->IsMagazine())
+	if (Item->Definition->UsesAmmunition())
 	{
 		MutableAmmo = &Item->LoadedAmmo;
-		Capacity = Item->Definition->GetMagazineCapacity();
-	}
-	else if (Item->Definition->UsesMagazine() && Item->InsertedMagazine.IsValid()
-		&& Item->InsertedMagazine.Definition)
-	{
-		MutableAmmo = &Item->InsertedMagazine.LoadedAmmo;
-		Capacity = Item->InsertedMagazine.Definition->GetMagazineCapacity();
-	}
-	else if (Item->Definition->UsesInternalAmmo())
-	{
-		MutableAmmo = &Item->LoadedAmmo;
-		Capacity = Item->Definition->GetInternalCapacity();
+		Capacity = Item->Definition->GetAmmoCapacity();
 	}
 
 	if (!MutableAmmo || LoadedAmmo > Capacity)
@@ -524,10 +475,7 @@ bool UNotoInventoryComponent::AddItemInstanceInternal(
 	FGuid& OutItemInstanceId)
 {
 	OutItemInstanceId.Invalidate();
-	if (!IsItemStateValid(ItemInstance)
-		|| IsInstanceIdInUse(ItemInstance.InstanceId)
-		|| (ItemInstance.InsertedMagazine.IsValid()
-			&& IsInstanceIdInUse(ItemInstance.InsertedMagazine.InstanceId)))
+	if (!IsItemStateValid(ItemInstance) || IsInstanceIdInUse(ItemInstance.InstanceId))
 	{
 		return false;
 	}
@@ -557,15 +505,12 @@ bool UNotoInventoryComponent::ConsumeLoadedAmmo(FGuid ItemInstanceId, int32 Amou
 		return false;
 	}
 
-	int32* MutableAmmo = Item->Definition->UsesMagazine()
-		                     ? (Item->InsertedMagazine.IsValid() ? &Item->InsertedMagazine.LoadedAmmo : nullptr)
-		                     : &Item->LoadedAmmo;
-	if (!MutableAmmo || *MutableAmmo < Amount)
+	if (Item->LoadedAmmo < Amount)
 	{
 		return false;
 	}
 
-	*MutableAmmo -= Amount;
+	Item->LoadedAmmo -= Amount;
 	MarkInventoryDirty();
 	return true;
 }
@@ -584,82 +529,48 @@ bool UNotoInventoryComponent::ReloadItem(FGuid ItemInstanceId, int32& OutReloade
 	}
 
 	const UNotoItemDefinition& WeaponDefinition = *Items[WeaponIndex].Definition;
-	if (WeaponDefinition.UsesMagazine())
-	{
-		const int32 CurrentRounds = Items[WeaponIndex].InsertedMagazine.IsValid()
-			                            ? Items[WeaponIndex].InsertedMagazine.LoadedAmmo
-			                            : 0;
-		int32 BestMagazineIndex = INDEX_NONE;
-		int32 BestRounds = CurrentRounds;
-		for (int32 Index = 0; Index < Items.Num(); ++Index)
-		{
-			const FNotoItemInstance& Candidate = Items[Index];
-			if (Candidate.Definition
-				&& Candidate.Definition->IsMagazine()
-				&& Candidate.Definition->GetAmmoFamily() == WeaponDefinition.GetAmmoFamily()
-				&& Candidate.LoadedAmmo > BestRounds)
-			{
-				BestMagazineIndex = Index;
-				BestRounds = Candidate.LoadedAmmo;
-			}
-		}
-		if (BestMagazineIndex == INDEX_NONE)
-		{
-			return false;
-		}
-
-		const FNotoItemInstance IncomingMagazine = Items[BestMagazineIndex];
-		FNotoItemInstance OutgoingMagazine;
-		const FNotoInsertedMagazine PreviousMagazine = Items[WeaponIndex].InsertedMagazine;
-		if (PreviousMagazine.IsValid() && PreviousMagazine.LoadedAmmo > 0)
-		{
-			OutgoingMagazine.InstanceId = PreviousMagazine.InstanceId;
-			OutgoingMagazine.DefinitionId = PreviousMagazine.DefinitionId;
-			OutgoingMagazine.Definition = PreviousMagazine.Definition;
-			OutgoingMagazine.Quantity = 1;
-			OutgoingMagazine.LoadedAmmo = PreviousMagazine.LoadedAmmo;
-		}
-
-		Items.RemoveAtSwap(BestMagazineIndex, EAllowShrinking::No);
-		FNotoItemInstance* Weapon = FindItem(ItemInstanceId);
-		check(Weapon);
-		Weapon->InsertedMagazine.InstanceId = IncomingMagazine.InstanceId;
-		Weapon->InsertedMagazine.DefinitionId = IncomingMagazine.DefinitionId;
-		Weapon->InsertedMagazine.Definition = IncomingMagazine.Definition;
-		Weapon->InsertedMagazine.LoadedAmmo = IncomingMagazine.LoadedAmmo;
-		if (OutgoingMagazine.InstanceId.IsValid())
-		{
-			Items.Add(MoveTemp(OutgoingMagazine));
-		}
-
-		OutReloadedRounds = IncomingMagazine.LoadedAmmo;
-		MarkInventoryDirty();
-		return true;
-	}
-
-	if (!WeaponDefinition.UsesInternalAmmo() || Items[WeaponIndex].LoadedAmmo >= WeaponDefinition.GetInternalCapacity())
-	{
-		return false;
-	}
-	const int32 LooseAmmoIndex = Items.IndexOfByPredicate([&WeaponDefinition](const FNotoItemInstance& Candidate)
-	{
-		return Candidate.Definition
-			&& Candidate.Definition->IsLooseAmmunition()
-			&& Candidate.Definition->GetAmmoFamily() == WeaponDefinition.GetAmmoFamily()
-			&& Candidate.Quantity > 0;
-	});
-	if (LooseAmmoIndex == INDEX_NONE)
+	UNotoItemDefinition* AmmunitionDefinition = WeaponDefinition.GetAmmunitionDefinition();
+	if (!WeaponDefinition.UsesAmmunition() || !AmmunitionDefinition || !AmmunitionDefinition->IsAmmunition()
+		|| AmmunitionDefinition->GetMaxStackSize() <= 1)
 	{
 		return false;
 	}
 
-	Items[WeaponIndex].LoadedAmmo += 1;
-	Items[LooseAmmoIndex].Quantity -= 1;
-	if (Items[LooseAmmoIndex].Quantity == 0)
+	const int32 MissingRounds = WeaponDefinition.GetAmmoCapacity() - Items[WeaponIndex].LoadedAmmo;
+	if (MissingRounds <= 0)
 	{
-		Items.RemoveAtSwap(LooseAmmoIndex, EAllowShrinking::No);
+		return false;
 	}
-	OutReloadedRounds = 1;
+
+	const int32 MaximumReload = WeaponDefinition.GetAmmoFeedType() == ENotoAmmoFeedType::Internal
+		                            ? 1
+		                            : MissingRounds;
+	int32 RemainingToLoad = FMath::Min(MissingRounds, MaximumReload);
+	for (int32 Index = Items.Num() - 1; Index >= 0 && RemainingToLoad > 0; --Index)
+	{
+		FNotoItemInstance& Candidate = Items[Index];
+		if (Candidate.Definition != AmmunitionDefinition || Candidate.Quantity <= 0)
+		{
+			continue;
+		}
+
+		const int32 ConsumedRounds = FMath::Min(Candidate.Quantity, RemainingToLoad);
+		Candidate.Quantity -= ConsumedRounds;
+		RemainingToLoad -= ConsumedRounds;
+		if (Candidate.Quantity == 0)
+		{
+			Items.RemoveAtSwap(Index, EAllowShrinking::No);
+		}
+	}
+
+	OutReloadedRounds = FMath::Min(MissingRounds, MaximumReload) - RemainingToLoad;
+	if (OutReloadedRounds <= 0)
+	{
+		return false;
+	}
+	FNotoItemInstance* Weapon = FindItem(ItemInstanceId);
+	check(Weapon);
+	Weapon->LoadedAmmo += OutReloadedRounds;
 	MarkInventoryDirty();
 	return true;
 }
@@ -735,7 +646,6 @@ bool UNotoInventoryComponent::ResolveItemDefinitions()
 	UAssetManager& AssetManager = UAssetManager::Get();
 	bool bAllResolved = true;
 	bool bAnyDefinitionChanged = false;
-	TArray<FNotoItemInstance> MigratedMagazines;
 
 	auto ResolveDefinition = [&AssetManager](FPrimaryAssetId DefinitionId)
 	{
@@ -760,98 +670,15 @@ bool UNotoInventoryComponent::ResolveItemDefinitions()
 			}
 		}
 
-		if (Item.Definition->UsesMagazine())
+		const int32 NormalizedAmmo = Item.Definition->UsesAmmunition()
+			                             ? FMath::Clamp(Item.LoadedAmmo, 0, Item.Definition->GetAmmoCapacity())
+			                             : 0;
+		if (NormalizedAmmo != Item.LoadedAmmo)
 		{
-			UNotoItemDefinition* StandardMagazine = Item.Definition->GetStandardMagazineDefinition();
-			int32 LegacySpareRounds = FMath::Max(0, Item.ReserveAmmo);
-			if (!Item.InsertedMagazine.IsValid())
-			{
-				if (!StandardMagazine)
-				{
-					bAllResolved = false;
-					continue;
-				}
-				const int32 LegacyLoadedAmmo = FMath::Max(0, Item.LoadedAmmo);
-				Item.InsertedMagazine.InstanceId = FGuid::NewGuid();
-				Item.InsertedMagazine.DefinitionId = StandardMagazine->GetPrimaryAssetId();
-				Item.InsertedMagazine.Definition = StandardMagazine;
-				Item.InsertedMagazine.LoadedAmmo = FMath::Clamp(
-					LegacyLoadedAmmo,
-					0,
-					StandardMagazine->GetMagazineCapacity());
-				LegacySpareRounds += FMath::Max(0, LegacyLoadedAmmo - Item.InsertedMagazine.LoadedAmmo);
-				Item.LoadedAmmo = 0;
-				bAnyDefinitionChanged = true;
-			}
-			else if (!Item.InsertedMagazine.Definition
-				|| Item.InsertedMagazine.Definition->GetPrimaryAssetId() != Item.InsertedMagazine.DefinitionId)
-			{
-				Item.InsertedMagazine.Definition = ResolveDefinition(Item.InsertedMagazine.DefinitionId);
-				bAnyDefinitionChanged = true;
-				if (!Item.InsertedMagazine.Definition)
-				{
-					bAllResolved = false;
-					continue;
-				}
-			}
-			else if (Item.LoadedAmmo != 0)
-			{
-				LegacySpareRounds += FMath::Max(0, Item.LoadedAmmo);
-				Item.LoadedAmmo = 0;
-				bAnyDefinitionChanged = true;
-			}
-
-			const int32 ClampedInsertedAmmo = FMath::Clamp(
-				Item.InsertedMagazine.LoadedAmmo,
-				0,
-				Item.InsertedMagazine.Definition->GetMagazineCapacity());
-			if (ClampedInsertedAmmo != Item.InsertedMagazine.LoadedAmmo)
-			{
-				Item.InsertedMagazine.LoadedAmmo = ClampedInsertedAmmo;
-				bAnyDefinitionChanged = true;
-			}
-
-			if (LegacySpareRounds > 0 && StandardMagazine)
-			{
-				const int32 Capacity = StandardMagazine->GetMagazineCapacity();
-				int32 RemainingRounds = LegacySpareRounds;
-				while (Capacity > 0 && RemainingRounds > 0)
-				{
-					FNotoItemInstance& Magazine = MigratedMagazines.AddDefaulted_GetRef();
-					Magazine.InstanceId = FGuid::NewGuid();
-					Magazine.DefinitionId = StandardMagazine->GetPrimaryAssetId();
-					Magazine.Definition = StandardMagazine;
-					Magazine.Quantity = 1;
-					Magazine.LoadedAmmo = FMath::Min(Capacity, RemainingRounds);
-					RemainingRounds -= Magazine.LoadedAmmo;
-				}
-			}
-			if (Item.ReserveAmmo != 0)
-			{
-				Item.ReserveAmmo = 0;
-				bAnyDefinitionChanged = true;
-			}
-		}
-		else if (Item.Definition->IsMagazine())
-		{
-			const int32 ClampedAmmo = FMath::Clamp(Item.LoadedAmmo, 0, Item.Definition->GetMagazineCapacity());
-			if (ClampedAmmo != Item.LoadedAmmo)
-			{
-				Item.LoadedAmmo = ClampedAmmo;
-				bAnyDefinitionChanged = true;
-			}
-		}
-		else if (Item.Definition->UsesInternalAmmo())
-		{
-			const int32 ClampedAmmo = FMath::Clamp(Item.LoadedAmmo, 0, Item.Definition->GetInternalCapacity());
-			if (ClampedAmmo != Item.LoadedAmmo)
-			{
-				Item.LoadedAmmo = ClampedAmmo;
-				bAnyDefinitionChanged = true;
-			}
+			Item.LoadedAmmo = NormalizedAmmo;
+			bAnyDefinitionChanged = true;
 		}
 	}
-	Items.Append(MoveTemp(MigratedMagazines));
 
 	if (bAnyDefinitionChanged)
 	{
@@ -872,7 +699,7 @@ bool UNotoInventoryComponent::IsInstanceIdInUse(FGuid InstanceId) const
 {
 	return InstanceId.IsValid() && Items.ContainsByPredicate([InstanceId](const FNotoItemInstance& Item)
 	{
-		return Item.InstanceId == InstanceId || Item.InsertedMagazine.InstanceId == InstanceId;
+		return Item.InstanceId == InstanceId;
 	});
 }
 

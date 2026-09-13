@@ -2,7 +2,7 @@
 
 No Tomorrow is an early-stage top-down immersive sim about planning and executing heists in a collapsing world.
 
-The current project is a gameplay foundation rather than a complete game. It includes character control and cursor aiming, interaction, inventory and physical ammunition, equipped-item presentation, hitscan combat, GAS-based health and damage, Common UI integration, and Gameplay Cameras.
+The current project is a gameplay foundation rather than a complete game. It includes character control and cursor aiming, interaction, inventory and ammunition, equipped-item presentation, hitscan combat, GAS-based health and damage, Common UI integration, and Gameplay Cameras.
 
 ## Requirements
 

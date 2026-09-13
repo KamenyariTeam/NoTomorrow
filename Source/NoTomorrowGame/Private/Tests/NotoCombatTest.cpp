@@ -59,7 +59,7 @@ namespace NotoCombatTests
 		UNotoItemDefinition* Definition = NewObject<UNotoItemDefinition>(GetTransientPackage(), FName(Name));
 		SetEnumProperty(*Definition, TEXT("ItemType"), ItemType);
 		SetEnumProperty(*Definition, TEXT("AmmoFeedType"), ENotoAmmoFeedType::Internal);
-		SetIntProperty(*Definition, TEXT("InternalCapacity"), 10);
+		SetIntProperty(*Definition, TEXT("AmmoCapacity"), 10);
 		SetBoolProperty(*Definition, TEXT("bFirearm"), true);
 		SetFloatProperty(*Definition, TEXT("FireInterval"), FireInterval);
 		SetFloatProperty(*Definition, TEXT("GunfireNoiseRange"), 0.0f);

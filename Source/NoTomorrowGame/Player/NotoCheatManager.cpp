@@ -74,22 +74,13 @@ void UNotoCheatManager::NotoInventoryDump() const
 		const FString ItemType = Item.Definition
 			                         ? UEnum::GetValueAsString(Item.Definition->GetItemType())
 			                         : TEXT("<unknown>");
-		const int32 LoadedAmmo = Item.InsertedMagazine.IsValid()
-			                         ? Item.InsertedMagazine.LoadedAmmo
-			                         : Item.LoadedAmmo;
 		FString Line = FString::Printf(TEXT("%s \"%s\" type=%s id=%s quantity=%d loaded=%d"),
 		                               *DefinitionName,
 		                               *DisplayName,
 		                               *ItemType,
 		                               *Item.InstanceId.ToString(),
 		                               Item.Quantity,
-		                               LoadedAmmo);
-		if (Item.InsertedMagazine.IsValid())
-		{
-			Line += FString::Printf(TEXT(" magazine=%s magazine-id=%s"),
-			                        *Item.InsertedMagazine.DefinitionId.ToString(),
-			                        *Item.InsertedMagazine.InstanceId.ToString());
-		}
+		                               Item.LoadedAmmo);
 		if (EquippedSlot != ENotoEquipmentSlot::None)
 		{
 			Line += FString::Printf(TEXT(" equipped=%s"), *UEnum::GetValueAsString(EquippedSlot));
@@ -139,8 +130,7 @@ void UNotoCheatManager::NotoInventoryGive(const FString& ItemDefinitionPath, int
 	}
 
 	FGuid ItemInstanceId;
-	int32 RemainingLoadedAmmo = 0;
-	if (!Inventory->CollectItem(Definition, Quantity, LoadedAmmo, ItemInstanceId, RemainingLoadedAmmo))
+	if (!Inventory->CollectItem(Definition, Quantity, LoadedAmmo, ItemInstanceId))
 	{
 		UE_LOG(LogNotoInventoryDebug, Warning, TEXT("Could not collect '%s' x%d."), *ItemDefinitionPath, Quantity);
 		return;
@@ -150,12 +140,6 @@ void UNotoCheatManager::NotoInventoryGive(const FString& ItemDefinitionPath, int
 	       *ItemDefinitionPath,
 	       Quantity,
 	       *ItemInstanceId.ToString());
-	if (RemainingLoadedAmmo > 0)
-	{
-		UE_LOG(LogNotoInventoryDebug, Warning,
-		       TEXT("%d loaded round(s) did not fit and were not granted by the cheat command."),
-		       RemainingLoadedAmmo);
-	}
 }
 
 void UNotoCheatManager::NotoInventoryDropActive(int32 Quantity)

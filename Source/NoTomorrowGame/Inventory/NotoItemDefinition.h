@@ -10,6 +10,7 @@
 
 class UStaticMesh;
 class UAnimMontage;
+class UNotoItemDefinition;
 
 /** Presentation montages selected by an item action tag such as equip, fire, reload, or tool use. */
 USTRUCT(BlueprintType)
@@ -36,7 +37,6 @@ enum class ENotoItemType : uint8
 	Tool,
 	QuestItem,
 	Lore,
-	Magazine,
 	Ammunition
 };
 
@@ -71,31 +71,22 @@ public:
 	bool IsDroppable() const { return bDroppable; }
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	bool IsMagazine() const { return ItemType == ENotoItemType::Magazine; }
-
-	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	bool IsLooseAmmunition() const { return ItemType == ENotoItemType::Ammunition; }
+	bool IsAmmunition() const { return ItemType == ENotoItemType::Ammunition; }
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
 	ENotoAmmoFeedType GetAmmoFeedType() const { return AmmoFeedType; }
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	FGameplayTag GetAmmoFamily() const { return AmmoFamily; }
+	FGameplayTag GetAmmoFamily() const;
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	int32 GetMagazineCapacity() const { return IsMagazine() ? FMath::Max(0, MagazineCapacity) : 0; }
+	int32 GetAmmoCapacity() const { return UsesAmmunition() ? FMath::Max(0, AmmoCapacity) : 0; }
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	int32 GetInternalCapacity() const { return UsesInternalAmmo() ? FMath::Max(0, InternalCapacity) : 0; }
+	UNotoItemDefinition* GetAmmunitionDefinition() const { return AmmunitionDefinition; }
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	UNotoItemDefinition* GetStandardMagazineDefinition() const { return StandardMagazineDefinition; }
-
-	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	bool UsesMagazine() const;
-
-	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	bool UsesInternalAmmo() const;
+	bool UsesAmmunition() const;
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Weapon")
 	bool IsFirearm() const { return ItemType == ENotoItemType::MainWeapon || bFirearm; }
@@ -153,22 +144,16 @@ private:
 	ENotoAmmoFeedType AmmoFeedType = ENotoAmmoFeedType::None;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammunition",
-		Meta = (AllowPrivateAccess = "true", Categories = "Ammo", EditCondition = "AmmoFeedType != ENotoAmmoFeedType::None || ItemType == ENotoItemType::Magazine || ItemType == ENotoItemType::Ammunition", EditConditionHides))
+		Meta = (AllowPrivateAccess = "true", Categories = "Ammo", EditCondition = "ItemType == ENotoItemType::Ammunition", EditConditionHides))
 	FGameplayTag AmmoFamily;
 
-	/** Standard magazine inserted by an authored weapon pickup and used for legacy-save migration. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammunition",
-		Meta = (AllowPrivateAccess = "true", EditCondition = "AmmoFeedType == ENotoAmmoFeedType::DetachableMagazine", EditConditionHides))
-	TObjectPtr<UNotoItemDefinition> StandardMagazineDefinition;
-
-	/** Capacity belongs to a physical magazine definition, never a detachable-magazine weapon. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammunition",
-		Meta = (AllowPrivateAccess = "true", ClampMin = "0", EditCondition = "ItemType == ENotoItemType::Magazine", EditConditionHides))
-	int32 MagazineCapacity = 0;
+		Meta = (AllowPrivateAccess = "true", EditCondition = "AmmoFeedType != ENotoAmmoFeedType::None", EditConditionHides))
+	TObjectPtr<UNotoItemDefinition> AmmunitionDefinition;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammunition",
-		Meta = (AllowPrivateAccess = "true", ClampMin = "0", EditCondition = "AmmoFeedType == ENotoAmmoFeedType::Internal", EditConditionHides))
-	int32 InternalCapacity = 0;
+		Meta = (AllowPrivateAccess = "true", ClampMin = "0", EditCondition = "AmmoFeedType != ENotoAmmoFeedType::None", EditConditionHides))
+	int32 AmmoCapacity = 0;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Firearm",
 		Meta = (AllowPrivateAccess = "true", EditCondition = "AmmoFeedType != ENotoAmmoFeedType::None", EditConditionHides))

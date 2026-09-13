@@ -12,19 +12,22 @@
 
 int32 UNotoItemDefinition::GetMaxStackSize() const
 {
-	return ItemType == ENotoItemType::MainWeapon || IsMagazine() || UsesMagazine() ? 1 : FMath::Max(1, MaxStackSize);
+	return ItemType == ENotoItemType::MainWeapon || UsesAmmunition() ? 1 : FMath::Max(1, MaxStackSize);
 }
 
-bool UNotoItemDefinition::UsesMagazine() const
+FGameplayTag UNotoItemDefinition::GetAmmoFamily() const
 {
-	const bool bWeapon = ItemType == ENotoItemType::MainWeapon || ItemType == ENotoItemType::SecondaryWeapon;
-	return bWeapon && AmmoFeedType == ENotoAmmoFeedType::DetachableMagazine;
+	return IsAmmunition()
+		       ? AmmoFamily
+		       : (AmmunitionDefinition && AmmunitionDefinition->IsAmmunition()
+		              ? AmmunitionDefinition->AmmoFamily
+		              : FGameplayTag());
 }
 
-bool UNotoItemDefinition::UsesInternalAmmo() const
+bool UNotoItemDefinition::UsesAmmunition() const
 {
 	const bool bWeapon = ItemType == ENotoItemType::MainWeapon || ItemType == ENotoItemType::SecondaryWeapon;
-	return bWeapon && AmmoFeedType == ENotoAmmoFeedType::Internal;
+	return bWeapon && AmmoFeedType != ENotoAmmoFeedType::None;
 }
 
 const FNotoEquippedItemAnimation* UNotoItemDefinition::FindEquippedAnimation(FGameplayTag ActionTag) const
@@ -41,9 +44,7 @@ EDataValidationResult UNotoItemDefinition::IsDataValid(FDataValidationContext& C
 	EDataValidationResult Result = CombineDataValidationResults(Super::IsDataValid(Context),
 	                                                            EDataValidationResult::Valid);
 	const bool bWeapon = ItemType == ENotoItemType::MainWeapon || ItemType == ENotoItemType::SecondaryWeapon;
-	const int32 FirearmCapacity = UsesMagazine() && StandardMagazineDefinition
-		                              ? StandardMagazineDefinition->GetMagazineCapacity()
-		                              : GetInternalCapacity();
+	const int32 FirearmCapacity = GetAmmoCapacity();
 
 	auto AddError = [&Result, &Context](const FText& Error)
 	{
@@ -56,42 +57,22 @@ EDataValidationResult UNotoItemDefinition::IsDataValid(FDataValidationContext& C
 		AddError(NSLOCTEXT("NotoItemDefinition", "FeedOnNonWeapon",
 		                   "AmmoFeedType is only valid on main or secondary weapons."));
 	}
-	if (IsMagazine() && (MagazineCapacity <= 0 || !AmmoFamily.IsValid() || MaxStackSize != 1))
+	if (IsAmmunition() && (!AmmoFamily.IsValid() || MaxStackSize <= 1))
 	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidMagazine",
-		                   "A magazine requires a family, positive capacity, and MaxStackSize equal to one."));
+		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidAmmunition",
+		                   "Ammunition requires an ammo family and a stack size greater than one."));
 	}
-	if (!IsMagazine() && MagazineCapacity != 0)
+	if (UsesAmmunition()
+		&& (!AmmunitionDefinition || !AmmunitionDefinition->IsAmmunition()
+			|| AmmunitionDefinition->GetMaxStackSize() <= 1 || AmmoCapacity <= 0))
 	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "CapacityOnNonMagazine",
-		                   "MagazineCapacity is only valid on physical magazine definitions."));
+		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidWeaponAmmunition",
+		                   "An ammunition-using weapon requires stackable ammunition and positive capacity."));
 	}
-	if (IsLooseAmmunition() && !AmmoFamily.IsValid())
+	if (!UsesAmmunition() && (AmmunitionDefinition || AmmoCapacity != 0))
 	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "LooseAmmoWithoutFamily",
-		                   "Loose ammunition requires an ammo family."));
-	}
-	if (UsesMagazine()
-		&& (!AmmoFamily.IsValid() || !StandardMagazineDefinition || !StandardMagazineDefinition->IsMagazine()
-			|| StandardMagazineDefinition->GetAmmoFamily() != AmmoFamily))
-	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidStandardMagazine",
-		                   "A detachable-magazine weapon requires a standard magazine from the same ammo family."));
-	}
-	if (!UsesMagazine() && StandardMagazineDefinition)
-	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "UnexpectedStandardMagazine",
-		                   "Only detachable-magazine weapons may specify a standard magazine."));
-	}
-	if (UsesInternalAmmo() && (!AmmoFamily.IsValid() || InternalCapacity <= 0))
-	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidInternalFeed",
-		                   "An internal-feed weapon requires an ammo family and positive internal capacity."));
-	}
-	if (!UsesInternalAmmo() && InternalCapacity != 0)
-	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "CapacityOnNonInternalFeed",
-		                   "InternalCapacity is only valid on internal-feed weapons."));
+		AddError(NSLOCTEXT("NotoItemDefinition", "UnexpectedWeaponAmmunition",
+		                   "Only ammunition-using weapons may specify ammunition or capacity."));
 	}
 	if (IsFirearm() && (AmmoFeedType == ENotoAmmoFeedType::None || FirearmDamage <= 0.0f || FirearmRange <= 0.0f
 		|| AmmoPerShot <= 0 || AmmoPerShot > FirearmCapacity || FireInterval < 0.0f || GunfireNoiseRange < 0.0f))
@@ -101,8 +82,8 @@ EDataValidationResult UNotoItemDefinition::IsDataValid(FDataValidationContext& C
 	}
 	if (ItemType == ENotoItemType::SecondaryWeapon && MaxStackSize > 1 && AmmoFeedType != ENotoAmmoFeedType::None)
 	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "StackedSecondaryMagazine",
-		                   "A secondary weapon with magazine data cannot be stackable."));
+		AddError(NSLOCTEXT("NotoItemDefinition", "StackedSecondaryWeapon",
+		                   "An ammunition-using secondary weapon cannot be stackable."));
 	}
 	if (ItemType == ENotoItemType::MainWeapon && MaxStackSize > 1)
 	{

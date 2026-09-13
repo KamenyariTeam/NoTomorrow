@@ -21,21 +21,21 @@ class NOTOMORROWGAME_API UNotoInventoryComponent : public UActorComponent
 public:
 	UNotoInventoryComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-	/** Adds an item without equipping it. LoadedAmmo below zero initializes magazines and weapons as full. */
+	/** Adds an item without equipping it. LoadedAmmo below zero initializes ammunition-using weapons as full. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
 	bool AddItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId);
 
 	/** Adds an item and equips it only when a compatible equipment slot is free. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Inventory")
 	bool CollectItem(UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo, FGuid& OutItemInstanceId,
-	                 int32& OutRemainingLoadedAmmo, bool bMakeCollectedItemActive = true);
+	                 bool bMakeCollectedItemActive = true);
 
 	/** Collects a dropped unique item without changing its identity or mutable state. */
 	bool CollectItemInstance(const FNotoItemInstance& ItemInstance, FGuid& OutItemInstanceId,
 	                         bool bMakeCollectedItemActive = true);
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
-	bool CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity, int32 LoadedAmmo) const;
+	bool CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity) const;
 
 	bool CanCollectItemInstance(const FNotoItemInstance& ItemInstance) const;
 
@@ -90,7 +90,7 @@ public:
 	const TArray<FNotoItemInstance>& GetItemsView() const { return Items; }
 	const TArray<FNotoEquippedItem>& GetEquipmentView() const { return Equipment; }
 
-	/** Resolves transient definitions and migrates legacy LoadedAmmo/ReserveAmmo weapon state after load. */
+	/** Resolves transient definitions and normalizes saved item state after load. */
 	bool ResolveItemDefinitions();
 
 	UPROPERTY(BlueprintAssignable, Category = "Noto|Inventory")

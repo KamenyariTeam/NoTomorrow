@@ -29,8 +29,8 @@ bool ANotoItemPickup::CanInteract_Implementation(APawn* Interactor) const
 	}
 
 	return bHasRuntimeItemInstance
-		       ? Inventory->CanCollectItemInstance(RuntimeItemInstance)
-		       : Inventory->CanCollectItem(ItemDefinition, Quantity, LoadedAmmo);
+	       ? Inventory->CanCollectItemInstance(RuntimeItemInstance)
+	       : Inventory->CanCollectItem(ItemDefinition, Quantity);
 }
 
 void ANotoItemPickup::Interact_Implementation(APawn* Interactor, const FNotoInteractionRequest& Request)
@@ -48,19 +48,17 @@ bool ANotoItemPickup::TryPickUp(APawn* Interactor, bool bMakeCollectedItemActive
 	}
 
 	FGuid ItemInstanceId;
-	int32 RemainingLoadedAmmo = 0;
 	const bool bCollected = bHasRuntimeItemInstance
 		                        ? Inventory->CollectItemInstance(
 			                        RuntimeItemInstance,
 			                        ItemInstanceId,
 			                        bMakeCollectedItemActive)
-		                        : Inventory->CollectItem(
-			                        ItemDefinition,
-			                        Quantity,
-			                        LoadedAmmo,
-			                        ItemInstanceId,
-			                        RemainingLoadedAmmo,
-			                        bMakeCollectedItemActive);
+	                        : Inventory->CollectItem(
+		                        ItemDefinition,
+		                        Quantity,
+		                        LoadedAmmo,
+		                        ItemInstanceId,
+		                        bMakeCollectedItemActive);
 	if (bCollected)
 	{
 		Destroy();
