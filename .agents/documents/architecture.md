@@ -1,52 +1,48 @@
 # No Tomorrow architecture
 
-This document records the current foundation and its intended boundaries.
+No Tomorrow is single-player first. The architecture keeps authoritative state separate from local input and presentation so co-op can be added deliberately later, without paying its full complexity now.
 
-## Confirmed architecture
+## Modules and content
 
-### Modules and plugins
+- `NoTomorrowGame` is the only project module and owns game-specific runtime code.
+- `NoTomorrowEditor` is an editor build target; there is no project editor module yet.
+- `ModularGameplayActors` provides Game Feature-compatible actor bases and must remain independent of the game module.
+- C++ owns reusable behavior and lifecycle. Blueprints and assets own concrete composition, configuration, presentation, maps, and tuning.
+- Game Features are available for independently activated features, not ordinary project composition.
 
-- `NoTomorrowGame` is the only project module. It owns game-specific framework classes, tagged Enhanced Input plumbing, cursor aiming, gameplay tags, and Gameplay Cameras integration.
-- `NoTomorrowEditor.Target.cs` builds `NoTomorrowGame` for the editor; there is no project editor module until a concrete editor-only feature needs one.
-- `ModularGameplayActors` supplies reusable modular actor, pawn, character, controller, GameMode, and GameState bases. The game module may depend on it; the plugin must not depend on the game.
-- Common UI, Game Features, Modular Gameplay, Enhanced Input, Gameplay Tags, and Gameplay Cameras are enabled facilities. Availability is not a requirement to route every feature through them.
+## Runtime ownership
 
-### Runtime composition
+| Owner | Responsibility |
+| --- | --- |
+| `ANotoPlayerState` | Persistent Ability System Component and inventory |
+| `ANotoCharacter` | Current ASC avatar and character-owned gameplay components |
+| `UNotoPlayerPawnComponent` | Local input, movement state, aim, and input routing |
+| `ANotoPlayerController` | Local input-method state and gameplay reticle |
+| `UNotoInventoryComponent` | Mutable item instances, equipment slots, active slot, and ammunition state |
+| `UNotoItemDefinition` | Immutable authored item and presentation data |
+| `UNotoFirearmComponent` | Active-weapon firing, per-item cooldowns, damage, reload, and gunfire noise |
+| `UNotoEquippedItemComponent` | Presentation rebuilt from the active inventory item |
+| `UNotoHealthSet` / `UNotoHealthComponent` | Replicated health state / avatar-facing damage and death events |
 
-- `ANotoGameMode` selects `ANotoCharacter`, `ANotoPlayerController`, `ANotoPlayerState`, and `AModularGameStateBase`. Concrete Blueprint defaults may specialize the pawn and other presentation data.
-- `ANotoCharacter::SetupPlayerInputComponent` hands input setup to `UNotoPlayerPawnComponent`.
-- `UNotoPlayerPawnComponent` owns local movement bindings and computes aim from the active input method. `ANotoPlayerController` owns the per-player gameplay reticle, Common Input method switching, and the boundary used by weapons and UI to replace or hide the reticle. `UNotoInputConfig` maps semantic gameplay tags to authored input actions; the default mapping context is installed by Enhanced Input developer settings.
-- `ANotoPlayerState` owns the player's single replicated Ability System Component. `ANotoCharacter` implements `IAbilitySystemInterface` as the current avatar and initializes actor info on server possession and client PlayerState replication.
-- `ANotoPlayerState` owns the UI-independent `UNotoInventoryComponent`. Primary data assets describe immutable items; save-friendly item-instance, equipment, and active-slot state hold mutable state. Loaded ammunition lives on weapon instances; collecting a matching equipped weapon transfers only rounds that fit and leaves excess rounds in the world pickup. After future save deserialization, the inventory exposes one explicit definition-resolution pass. World pickups use the normal interaction interface, and presentation observes inventory/equipment delegates through the controller convenience accessor.
-- `UNotoCheatManager` owns developer-only gameplay commands and their transient debug state. `ANotoPlayerController` selects it as the project cheat-manager class and only forwards PlayerState lifecycle changes needed for safe debug delegate rebinding.
-- Gameplay reticles are viewport widgets independent from software cursors. Software cursors remain configured through `UUserInterfaceSettings` for menus and other pointer-driven UI.
-- Stock Unreal Engine, AssetManager, GameInstance, WorldSettings, and HUD behavior is used until game-specific behavior creates a real subclass requirement.
+## Lifecycle boundaries
 
-### Content ownership
+- The PlayerState owns the ASC; the possessed character is its avatar.
+- Possession and `OnRep_PlayerState` initialize avatar bindings. Unpossession and end play remove them.
+- Inventory changes are event-driven. Definition resolution refreshes both inventory observers and equipped presentation.
+- Equipped actors are transient, non-replicated presentation objects reconstructed from inventory state.
+- Primary asset IDs and item GUIDs are the stable save-facing identities; resolved UObject pointers are transient.
 
-- C++ owns engine integration, reusable lifecycle behavior, and stable seams.
-- Blueprints and assets configure the concrete game mode, character, cameras, tagged input data, cursor, and maps.
-- Item definitions and placed pickups are authored assets. Weapon meshes, attacks, equipped presentation, sounds, icons, notes, and audio-log playback remain presentation or feature content rather than inventory-component responsibilities.
-- Game-specific behavior belongs in `NoTomorrowGame`. A plugin is appropriate only for genuinely reusable code with a clear independent boundary.
-- Game Features are reserved for features that require independent activation/deactivation and feature-owned actions or content. They are not the default project-composition mechanism.
+## Networking status
 
-## Placement guidance
+- Health attributes and the dead tag have replication support on the PlayerState ASC.
+- Inventory mutation, interaction, weapon firing, and equipment state are currently standalone-only and are not server-authoritative co-op implementations.
+- When co-op becomes a requirement, add authoritative requests and replicated inventory/equipment state at these existing ownership boundaries. Do not duplicate state on the pawn or presentation actors.
+- Never assume player index zero or store per-player gameplay state in global mutable objects.
 
-- Use actors, pawns, and controllers for world presence, possession, authority, and replicated identity semantics.
-- Use actor components for behavior owned by an actor and sharing its lifecycle.
-- Use world subsystems for one service per world and game-instance subsystems only for session state that must survive travel.
-- Use local-player subsystems for per-local-player input, preferences, and presentation.
-- Use data assets for authored immutable configuration; keep mutable runtime state elsewhere.
-- Add editor-only code only when a concrete workflow requires it, then isolate it in an editor module or uncooked plugin module.
+## Growth rules
 
-## Single-player first, co-op aware
-
-- Optimize current features for single-player. Do not add replication, RPCs, online services, or networking abstractions without a requirement.
-- Do not assume player index zero. Pass actor, controller, instigator, target, and interaction context explicitly.
-- Separate local input and presentation from authoritative gameplay state.
-- Do not store per-player state in global singletons or static mutable variables.
-- Keep save-game state separate from transient runtime and presentation state.
-
-## Future architecture rule
-
-Use the smallest native Unreal facility that meets the current requirement. Add a subsystem, module, plugin, Game Feature, or other architectural layer only when a concrete caller needs its lifecycle or boundary. Add custom Ability System Component behavior, attribute sets, and abilities only when a gameplay feature needs them; the PlayerState remains their persistent owner.
+- Add an editor module only for real editor-only C++.
+- Add a subsystem only when its world, game-instance, or local-player lifetime is required.
+- Split item definitions into fragments only when multiple item families create meaningful optional behavior, not preemptively.
+- Add Lyra-style init-state coordination when asynchronously injected Game Feature components require it.
+- Prefer the smallest native Unreal facility that satisfies the current feature.

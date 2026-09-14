@@ -3,10 +3,15 @@
 #include "NotoCharacter.h"
 
 #include "AbilitySystemComponent.h"
+#include "Character/NotoEquippedItemComponent.h"
+#include "Combat/NotoFirearmComponent.h"
+#include "Combat/NotoHealthComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/GameplayCameraComponent.h"
 #include "NotoPlayerPawnComponent.h"
 #include "Interaction/NotoInteractionComponent.h"
+#include "MotionWarpingComponent.h"
 #include "Player/NotoPlayerState.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
@@ -25,11 +30,21 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 		MeshComponent->SetCollisionProfileName(TEXT("PawnMesh"));
 	}
 
+	PresentationMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("PresentationMesh"));
+	PresentationMesh->SetupAttachment(GetMesh());
+	PresentationMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	PresentationMesh->SetGenerateOverlapEvents(false);
+	PresentationMesh->SetCanEverAffectNavigation(false);
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+
 	GameplayCameraComponent = CreateDefaultSubobject<UGameplayCameraComponent>(TEXT("CameraComponent"));
 	GameplayCameraComponent->SetupAttachment(RootComponent);
 	GameplayCameraComponent->SetRelativeRotation(FRotator(-90.0f, 0.0f, 0.0f));
 
 	InteractionComponent = CreateDefaultSubobject<UNotoInteractionComponent>(TEXT("InteractionComponent"));
+	HealthComponent = CreateDefaultSubobject<UNotoHealthComponent>(TEXT("HealthComponent"));
+	FirearmComponent = CreateDefaultSubobject<UNotoFirearmComponent>(TEXT("FirearmComponent"));
+	EquippedItemComponent = CreateDefaultSubobject<UNotoEquippedItemComponent>(TEXT("EquippedItemComponent"));
 	PlayerPawnComponent = CreateDefaultSubobject<UNotoPlayerPawnComponent>(TEXT("PlayerPawnComponent"));
 
 	bUseControllerRotationPitch = false;
@@ -38,6 +53,11 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 
 	BaseEyeHeight = 80.0f;
 	CrouchedEyeHeight = 50.0f;
+}
+
+USkeletalMeshComponent* ANotoCharacter::GetPresentationMesh() const
+{
+	return PresentationMesh && PresentationMesh->GetSkeletalMeshAsset() ? PresentationMesh.Get() : GetMesh();
 }
 
 UAbilitySystemComponent* ANotoCharacter::GetAbilitySystemComponent() const
@@ -91,13 +111,17 @@ void ANotoCharacter::InitializeAbilitySystem()
 	UAbilitySystemComponent* AbilitySystemComponent = NotoPlayerState->GetAbilitySystemComponent();
 	check(AbilitySystemComponent);
 	AbilitySystemComponent->InitAbilityActorInfo(NotoPlayerState, this);
+	HealthComponent->InitializeWithAbilitySystem(AbilitySystemComponent);
+	EquippedItemComponent->InitializeWithInventory(NotoPlayerState->GetInventoryComponent());
 }
 
 void ANotoCharacter::UninitializeAbilitySystem()
 {
+	EquippedItemComponent->UninitializeFromInventory();
 	if (UAbilitySystemComponent* AbilitySystemComponent = GetAbilitySystemComponent();
 		AbilitySystemComponent && AbilitySystemComponent->GetAvatarActor() == this)
 	{
+		HealthComponent->UninitializeFromAbilitySystem();
 		AbilitySystemComponent->ClearActorInfo();
 	}
 }

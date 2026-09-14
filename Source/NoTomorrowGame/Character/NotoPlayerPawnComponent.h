@@ -61,7 +61,6 @@ public:
 	//~End of UActorComponent interface
 
 protected:
-
 	UFUNCTION()
 	void HandlePawnControllerChanged(APawn* Pawn, AController* OldController, AController* NewController);
 
@@ -72,6 +71,8 @@ protected:
 	void Input_ToggleSneak();
 	void Input_Interact();
 	void Input_InteractModified();
+	void Input_Fire();
+	void Input_Reload();
 	void Input_Drop();
 	void TryInteract(bool bModifierHeld);
 	void UpdateAimFromMouseCursor();

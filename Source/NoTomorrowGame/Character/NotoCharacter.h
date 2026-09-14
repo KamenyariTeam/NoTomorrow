@@ -8,8 +8,13 @@
 
 class UInputComponent;
 class UGameplayCameraComponent;
+class UNotoFirearmComponent;
+class UNotoEquippedItemComponent;
+class UNotoHealthComponent;
 class UNotoInteractionComponent;
 class UNotoPlayerPawnComponent;
+class UMotionWarpingComponent;
+class USkeletalMeshComponent;
 
 /** Player avatar used by No Tomorrow. */
 UCLASS(Config = Game, BlueprintType)
@@ -30,16 +35,46 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-protected:
+	UFUNCTION(BlueprintPure, Category = "Noto|Health")
+	UNotoHealthComponent* GetHealthComponent() const { return HealthComponent; }
 
+	UFUNCTION(BlueprintPure, Category = "Noto|Weapon")
+	UNotoFirearmComponent* GetFirearmComponent() const { return FirearmComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Noto|Weapon")
+	UNotoEquippedItemComponent* GetEquippedItemComponent() const { return EquippedItemComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Noto|Traversal")
+	UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
+
+	/** Returns the visible mesh when configured, otherwise preserves the primary mesh as the presentation target. */
+	USkeletalMeshComponent* GetPresentationMesh() const;
+
+protected:
 	void InitializeAbilitySystem();
 	void UninitializeAbilitySystem();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UGameplayCameraComponent> GameplayCameraComponent;
 
+	/** Visible character mesh. The primary ACharacter mesh remains the GASP animation source. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USkeletalMeshComponent> PresentationMesh;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Traversal", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Interaction", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UNotoInteractionComponent> InteractionComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Health", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoHealthComponent> HealthComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Weapon", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoFirearmComponent> FirearmComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Weapon", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoEquippedItemComponent> EquippedItemComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Character", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UNotoPlayerPawnComponent> PlayerPawnComponent;

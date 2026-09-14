@@ -2,6 +2,8 @@
 
 #include "Inventory/NotoItemDefinition.h"
 
+#include "Character/NotoEquippedItemActor.h"
+
 #if WITH_EDITOR
 #include "Misc/DataValidation.h"
 #endif
@@ -10,13 +12,30 @@
 
 int32 UNotoItemDefinition::GetMaxStackSize() const
 {
-	return ItemType == ENotoItemType::MainWeapon || UsesMagazine() ? 1 : FMath::Max(1, MaxStackSize);
+	return ItemType == ENotoItemType::MainWeapon || UsesAmmunition() ? 1 : FMath::Max(1, MaxStackSize);
 }
 
-bool UNotoItemDefinition::UsesMagazine() const
+FGameplayTag UNotoItemDefinition::GetAmmoFamily() const
+{
+	return IsAmmunition()
+		       ? AmmoFamily
+		       : (AmmunitionDefinition && AmmunitionDefinition->IsAmmunition()
+		              ? AmmunitionDefinition->AmmoFamily
+		              : FGameplayTag());
+}
+
+bool UNotoItemDefinition::UsesAmmunition() const
 {
 	const bool bWeapon = ItemType == ENotoItemType::MainWeapon || ItemType == ENotoItemType::SecondaryWeapon;
-	return bWeapon && GetMagazineCapacity() > 0;
+	return bWeapon && AmmoFeedType != ENotoAmmoFeedType::None;
+}
+
+const FNotoEquippedItemAnimation* UNotoItemDefinition::FindEquippedAnimation(FGameplayTag ActionTag) const
+{
+	return EquippedAnimations.FindByPredicate([ActionTag](const FNotoEquippedItemAnimation& Animation)
+	{
+		return Animation.ActionTag == ActionTag;
+	});
 }
 
 #if WITH_EDITOR
@@ -25,7 +44,7 @@ EDataValidationResult UNotoItemDefinition::IsDataValid(FDataValidationContext& C
 	EDataValidationResult Result = CombineDataValidationResults(Super::IsDataValid(Context),
 	                                                            EDataValidationResult::Valid);
 	const bool bWeapon = ItemType == ENotoItemType::MainWeapon || ItemType == ENotoItemType::SecondaryWeapon;
-	const bool bHasMagazineData = MagazineCapacity != 0;
+	const int32 FirearmCapacity = GetAmmoCapacity();
 
 	auto AddError = [&Result, &Context](const FText& Error)
 	{
@@ -33,19 +52,38 @@ EDataValidationResult UNotoItemDefinition::IsDataValid(FDataValidationContext& C
 		Context.AddError(Error);
 	};
 
-	if (!bWeapon && bHasMagazineData)
+	if (!bWeapon && AmmoFeedType != ENotoAmmoFeedType::None)
 	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "MagazineOnNonWeapon",
-		                   "Magazine data is only valid on main or secondary weapons."));
+		AddError(NSLOCTEXT("NotoItemDefinition", "FeedOnNonWeapon",
+		                   "AmmoFeedType is only valid on main or secondary weapons."));
 	}
-	if (MagazineCapacity < 0)
+	if (IsAmmunition() && (!AmmoFamily.IsValid() || MaxStackSize <= 1))
 	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "NegativeMagazineCapacity", "MagazineCapacity cannot be negative."));
+		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidAmmunition",
+		                   "Ammunition requires an ammo family and a stack size greater than one."));
 	}
-	if (ItemType == ENotoItemType::SecondaryWeapon && MaxStackSize > 1 && bHasMagazineData)
+	if (UsesAmmunition()
+		&& (!AmmunitionDefinition || !AmmunitionDefinition->IsAmmunition()
+			|| AmmunitionDefinition->GetMaxStackSize() <= 1 || AmmoCapacity <= 0))
 	{
-		AddError(NSLOCTEXT("NotoItemDefinition", "StackedSecondaryMagazine",
-		                   "A secondary weapon with magazine data cannot be stackable."));
+		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidWeaponAmmunition",
+		                   "An ammunition-using weapon requires stackable ammunition and positive capacity."));
+	}
+	if (!UsesAmmunition() && (AmmunitionDefinition || AmmoCapacity != 0))
+	{
+		AddError(NSLOCTEXT("NotoItemDefinition", "UnexpectedWeaponAmmunition",
+		                   "Only ammunition-using weapons may specify ammunition or capacity."));
+	}
+	if (IsFirearm() && (AmmoFeedType == ENotoAmmoFeedType::None || FirearmDamage <= 0.0f || FirearmRange <= 0.0f
+		|| AmmoPerShot <= 0 || AmmoPerShot > FirearmCapacity || FireInterval < 0.0f || GunfireNoiseRange < 0.0f))
+	{
+		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidFirearm",
+		                   "A firearm requires an ammo feed, positive damage/range/ammo per shot, valid fire interval/noise range, and enough loaded capacity for one shot."));
+	}
+	if (ItemType == ENotoItemType::SecondaryWeapon && MaxStackSize > 1 && AmmoFeedType != ENotoAmmoFeedType::None)
+	{
+		AddError(NSLOCTEXT("NotoItemDefinition", "StackedSecondaryWeapon",
+		                   "An ammunition-using secondary weapon cannot be stackable."));
 	}
 	if (ItemType == ENotoItemType::MainWeapon && MaxStackSize > 1)
 	{
@@ -55,6 +93,21 @@ EDataValidationResult UNotoItemDefinition::IsDataValid(FDataValidationContext& C
 	if (MaxStackSize < 1)
 	{
 		AddError(NSLOCTEXT("NotoItemDefinition", "InvalidStackSize", "MaxStackSize must be at least one."));
+	}
+	if (EquippedActorClass && EquippedSocketName.IsNone())
+	{
+		AddError(NSLOCTEXT("NotoItemDefinition", "PresentationWithoutSocket",
+		                   "An equipped item actor requires an attachment socket name."));
+	}
+	TSet<FGameplayTag> AnimationTags;
+	for (const FNotoEquippedItemAnimation& Animation : EquippedAnimations)
+	{
+		if (!EquippedActorClass || !Animation.ActionTag.IsValid() || AnimationTags.Contains(Animation.ActionTag))
+		{
+			AddError(NSLOCTEXT("NotoItemDefinition", "InvalidEquippedAnimation",
+			                   "Equipped animations require an equipped actor class and a unique action tag."));
+		}
+		AnimationTags.Add(Animation.ActionTag);
 	}
 
 	return Result;

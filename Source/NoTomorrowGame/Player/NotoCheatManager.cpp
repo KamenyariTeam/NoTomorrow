@@ -130,8 +130,7 @@ void UNotoCheatManager::NotoInventoryGive(const FString& ItemDefinitionPath, int
 	}
 
 	FGuid ItemInstanceId;
-	int32 RemainingLoadedAmmo = 0;
-	if (!Inventory->CollectItem(Definition, Quantity, LoadedAmmo, ItemInstanceId, RemainingLoadedAmmo))
+	if (!Inventory->CollectItem(Definition, Quantity, LoadedAmmo, ItemInstanceId))
 	{
 		UE_LOG(LogNotoInventoryDebug, Warning, TEXT("Could not collect '%s' x%d."), *ItemDefinitionPath, Quantity);
 		return;
@@ -141,12 +140,6 @@ void UNotoCheatManager::NotoInventoryGive(const FString& ItemDefinitionPath, int
 	       *ItemDefinitionPath,
 	       Quantity,
 	       *ItemInstanceId.ToString());
-	if (RemainingLoadedAmmo > 0)
-	{
-		UE_LOG(LogNotoInventoryDebug, Warning,
-		       TEXT("%d loaded round(s) did not fit and were not granted by the cheat command."),
-		       RemainingLoadedAmmo);
-	}
 }
 
 void UNotoCheatManager::NotoInventoryDropActive(int32 Quantity)

@@ -42,7 +42,7 @@ struct NOTOMORROWGAME_API FNotoItemInstance
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
 	int32 Quantity = 0;
 
-	/** Per-instance magazine ammunition. There are no standalone ammunition items. */
+	/** Rounds currently loaded in a weapon. Other item types always keep this at zero. */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, SaveGame)
 	int32 LoadedAmmo = 0;
 };

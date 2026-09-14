@@ -92,8 +92,6 @@ bool UNotoInventoryComponent::AddItemInternal(
 		}
 	}
 
-	const int32 InitialLoadedAmmo = ResolveLoadedAmmo(*Definition, LoadedAmmo);
-
 	while (RemainingQuantity > 0)
 	{
 		FNotoItemInstance& Item = Items.AddDefaulted_GetRef();
@@ -101,7 +99,7 @@ bool UNotoInventoryComponent::AddItemInternal(
 		Item.DefinitionId = DefinitionId;
 		Item.Definition = Definition;
 		Item.Quantity = FMath::Min(RemainingQuantity, MaxStackSize);
-		Item.LoadedAmmo = InitialLoadedAmmo;
+		InitializeItemAmmunition(Item, LoadedAmmo);
 		RemainingQuantity -= Item.Quantity;
 
 		if (!OutItemInstanceId.IsValid())
@@ -119,47 +117,17 @@ bool UNotoInventoryComponent::CollectItem(
 	int32 Quantity,
 	int32 LoadedAmmo,
 	FGuid& OutItemInstanceId,
-	int32& OutRemainingLoadedAmmo,
 	bool bMakeCollectedItemActive)
 {
 	OutItemInstanceId.Invalidate();
-	OutRemainingLoadedAmmo = 0;
 	FCollectionPlan Plan;
-	if (!Definition || !BuildCollectionPlan(*Definition, Quantity, LoadedAmmo, Plan))
+	if (!Definition || !BuildCollectionPlan(*Definition, Quantity, Plan))
 	{
 		return false;
 	}
 
 	FScopedMutation Mutation(*this);
 	const ENotoEquipmentSlot PreviousActiveSlot = ActiveSlot;
-	if (Plan.Action == ECollectionAction::TransferWeaponAmmo)
-	{
-		FNotoItemInstance* EquippedWeapon = FindItem(Plan.PreferredItemInstanceId);
-		check(EquippedWeapon && EquippedWeapon->DefinitionId == Definition->GetPrimaryAssetId() && Definition->
-			UsesMagazine());
-
-		OutItemInstanceId = EquippedWeapon->InstanceId;
-		const int32 IncomingLoadedAmmo = ResolveLoadedAmmo(*Definition, LoadedAmmo);
-		const int32 TransferredAmmo = FMath::Min(
-			IncomingLoadedAmmo,
-			Definition->GetMagazineCapacity() - EquippedWeapon->LoadedAmmo);
-		check(TransferredAmmo > 0);
-		EquippedWeapon->LoadedAmmo += TransferredAmmo;
-		OutRemainingLoadedAmmo = IncomingLoadedAmmo - TransferredAmmo;
-		MarkInventoryDirty();
-		return !bMakeCollectedItemActive || SetActiveSlot(Plan.Slot);
-	}
-
-	if (Plan.Action == ECollectionAction::Replace)
-	{
-		const FNotoItemInstance* ReplacedItem = FindItem(Plan.ReplacedItemInstanceId);
-		check(ReplacedItem);
-		if (!DropItem(ReplacedItem->InstanceId, ReplacedItem->Quantity))
-		{
-			return false;
-		}
-	}
-
 	const bool bAdded = AddItemInternal(Definition, Quantity, LoadedAmmo, Plan.PreferredItemInstanceId,
 	                                    OutItemInstanceId);
 	check(bAdded && OutItemInstanceId.IsValid());
@@ -170,7 +138,6 @@ bool UNotoInventoryComponent::CollectItem(
 		check(OutItemInstanceId == Plan.PreferredItemInstanceId);
 		return !bMakeCollectedItemActive || SetActiveSlot(Plan.Slot);
 	case ECollectionAction::Equip:
-	case ECollectionAction::Replace:
 		{
 			if (!EquipItem(OutItemInstanceId, Plan.Slot, false))
 			{
@@ -184,17 +151,54 @@ bool UNotoInventoryComponent::CollectItem(
 	}
 }
 
-bool UNotoInventoryComponent::CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity,
-                                             int32 LoadedAmmo) const
+bool UNotoInventoryComponent::CollectItemInstance(
+	const FNotoItemInstance& ItemInstance,
+	FGuid& OutItemInstanceId,
+	bool bMakeCollectedItemActive)
+{
+	OutItemInstanceId.Invalidate();
+	FCollectionPlan Plan;
+	if (!IsItemStateValid(ItemInstance)
+		|| !BuildCollectionPlan(*ItemInstance.Definition, ItemInstance.Quantity, Plan))
+	{
+		return false;
+	}
+
+	FScopedMutation Mutation(*this);
+	const ENotoEquipmentSlot PreviousActiveSlot = ActiveSlot;
+	if (!AddItemInstanceInternal(ItemInstance, OutItemInstanceId))
+	{
+		return false;
+	}
+
+	if (Plan.Action != ECollectionAction::Equip)
+	{
+		return true;
+	}
+	if (!EquipItem(OutItemInstanceId, Plan.Slot, false))
+	{
+		return false;
+	}
+	return bMakeCollectedItemActive || SetActiveSlot(PreviousActiveSlot);
+}
+
+bool UNotoInventoryComponent::CanCollectItem(const UNotoItemDefinition* Definition, int32 Quantity) const
 {
 	FCollectionPlan Plan;
-	return Definition && BuildCollectionPlan(*Definition, Quantity, LoadedAmmo, Plan);
+	return Definition && BuildCollectionPlan(*Definition, Quantity, Plan);
+}
+
+bool UNotoInventoryComponent::CanCollectItemInstance(const FNotoItemInstance& ItemInstance) const
+{
+	FCollectionPlan Plan;
+	return IsItemStateValid(ItemInstance)
+		&& !IsInstanceIdInUse(ItemInstance.InstanceId)
+		&& BuildCollectionPlan(*ItemInstance.Definition, ItemInstance.Quantity, Plan);
 }
 
 bool UNotoInventoryComponent::BuildCollectionPlan(
 	const UNotoItemDefinition& Definition,
 	int32 Quantity,
-	int32 LoadedAmmo,
 	FCollectionPlan& OutPlan) const
 {
 	OutPlan = FCollectionPlan();
@@ -236,28 +240,6 @@ bool UNotoInventoryComponent::BuildCollectionPlan(
 	const FPrimaryAssetId DefinitionId = Definition.GetPrimaryAssetId();
 	const int32 MaxStackSize = Definition.GetMaxStackSize();
 
-	if (Definition.UsesMagazine() && Quantity == 1)
-	{
-		for (const ENotoEquipmentSlot Slot : CompatibleSlots)
-		{
-			const FNotoEquippedItem* EquippedItem = FindEquipment(Slot);
-			const FNotoItemInstance* Item = EquippedItem ? FindItem(EquippedItem->ItemInstanceId) : nullptr;
-			if (Item && Item->DefinitionId == DefinitionId)
-			{
-				if (ResolveLoadedAmmo(Definition, LoadedAmmo) <= 0 || Item->LoadedAmmo >= Definition.
-					GetMagazineCapacity())
-				{
-					return false;
-				}
-
-				OutPlan.Action = ECollectionAction::TransferWeaponAmmo;
-				OutPlan.Slot = Slot;
-				OutPlan.PreferredItemInstanceId = Item->InstanceId;
-				return true;
-			}
-		}
-	}
-
 	for (const ENotoEquipmentSlot Slot : CompatibleSlots)
 	{
 		const FNotoEquippedItem* EquippedItem = FindEquipment(Slot);
@@ -280,49 +262,39 @@ bool UNotoInventoryComponent::BuildCollectionPlan(
 			return true;
 		}
 	}
+	return true;
+}
 
-	auto PlanReplacement = [this, &OutPlan](ENotoEquipmentSlot Slot)
+void UNotoInventoryComponent::InitializeItemAmmunition(FNotoItemInstance& Item, int32 LoadedAmmo)
+{
+	check(Item.Definition);
+	const UNotoItemDefinition& Definition = *Item.Definition;
+	if (Definition.UsesAmmunition())
 	{
-		const FNotoEquippedItem* EquippedItem = FindEquipment(Slot);
-		const FNotoItemInstance* Item = EquippedItem ? FindItem(EquippedItem->ItemInstanceId) : nullptr;
-		if (!Item || !CanDropItem(Item->InstanceId, Item->Quantity))
-		{
-			return false;
-		}
+		Item.LoadedAmmo = ResolveLoadedAmmo(Definition, LoadedAmmo);
+	}
+}
 
-		OutPlan.Action = ECollectionAction::Replace;
-		OutPlan.Slot = Slot;
-		OutPlan.ReplacedItemInstanceId = Item->InstanceId;
-		return true;
-	};
-
-	if (Definition.GetItemType() != ENotoItemType::Tool)
+bool UNotoInventoryComponent::IsItemStateValid(const FNotoItemInstance& Item)
+{
+	if (!Item.InstanceId.IsValid() || !Item.Definition || Item.DefinitionId != Item.Definition->GetPrimaryAssetId()
+		|| Item.Quantity <= 0 || (Item.Definition->GetMaxStackSize() == 1 && Item.Quantity != 1))
 	{
-		return PlanReplacement(CompatibleSlots[0]);
+		return false;
 	}
 
-	if (ActiveSlot >= ENotoEquipmentSlot::Tool1
-		&& ActiveSlot <= ENotoEquipmentSlot::Tool5
-		&& PlanReplacement(ActiveSlot))
+	if (Item.Definition->UsesAmmunition())
 	{
-		return true;
+		return Item.LoadedAmmo >= 0 && Item.LoadedAmmo <= Item.Definition->GetAmmoCapacity();
 	}
-
-	for (const ENotoEquipmentSlot Slot : CompatibleSlots)
-	{
-		if (Slot != ActiveSlot && PlanReplacement(Slot))
-		{
-			return true;
-		}
-	}
-	return false;
+	return Item.LoadedAmmo == 0;
 }
 
 int32 UNotoInventoryComponent::ResolveLoadedAmmo(const UNotoItemDefinition& Definition, int32 LoadedAmmo)
 {
-	return Definition.UsesMagazine()
-		       ? FMath::Clamp(LoadedAmmo < 0 ? Definition.GetMagazineCapacity() : LoadedAmmo, 0,
-		                      Definition.GetMagazineCapacity())
+	return Definition.UsesAmmunition()
+		       ? FMath::Clamp(LoadedAmmo < 0 ? Definition.GetAmmoCapacity() : LoadedAmmo, 0,
+		                      Definition.GetAmmoCapacity())
 		       : 0;
 }
 
@@ -442,7 +414,13 @@ bool UNotoInventoryComponent::DropItemAt(FGuid ItemInstanceId, int32 Quantity, c
 		return false;
 	}
 
-	Pickup->InitializePickup(Item->Definition, Quantity, Item->LoadedAmmo);
+	FNotoItemInstance DroppedItem = *Item;
+	DroppedItem.Quantity = Quantity;
+	if (Quantity < Item->Quantity)
+	{
+		DroppedItem.InstanceId = FGuid::NewGuid();
+	}
+	Pickup->InitializePickup(DroppedItem);
 	Pickup->FinishSpawning(DropTransform);
 	RemoveItemQuantity(ItemInstanceId, Quantity);
 	return true;
@@ -467,22 +445,133 @@ bool UNotoInventoryComponent::SetLoadedAmmo(FGuid ItemInstanceId, int32 LoadedAm
 {
 	FScopedMutation Mutation(*this);
 	FNotoItemInstance* Item = FindItem(ItemInstanceId);
-	if (!Item
-		|| !Item->Definition
-		|| !Item->Definition->UsesMagazine()
-		|| Item->Quantity != 1
-		|| Item->Definition->GetMaxStackSize() != 1
-		|| LoadedAmmo < 0
-		|| LoadedAmmo > Item->Definition->GetMagazineCapacity())
+	if (!Item || !Item->Definition || LoadedAmmo < 0)
 	{
 		return false;
 	}
 
-	if (Item->LoadedAmmo != LoadedAmmo)
+	int32* MutableAmmo = nullptr;
+	int32 Capacity = 0;
+	if (Item->Definition->UsesAmmunition())
 	{
-		Item->LoadedAmmo = LoadedAmmo;
+		MutableAmmo = &Item->LoadedAmmo;
+		Capacity = Item->Definition->GetAmmoCapacity();
+	}
+
+	if (!MutableAmmo || LoadedAmmo > Capacity)
+	{
+		return false;
+	}
+	if (*MutableAmmo != LoadedAmmo)
+	{
+		*MutableAmmo = LoadedAmmo;
 		MarkInventoryDirty();
 	}
+	return true;
+}
+
+bool UNotoInventoryComponent::AddItemInstanceInternal(
+	const FNotoItemInstance& ItemInstance,
+	FGuid& OutItemInstanceId)
+{
+	OutItemInstanceId.Invalidate();
+	if (!IsItemStateValid(ItemInstance) || IsInstanceIdInUse(ItemInstance.InstanceId))
+	{
+		return false;
+	}
+
+	if (ItemInstance.Definition->GetMaxStackSize() > 1)
+	{
+		return AddItemInternal(
+			ItemInstance.Definition,
+			ItemInstance.Quantity,
+			ItemInstance.LoadedAmmo,
+			FGuid(),
+			OutItemInstanceId);
+	}
+
+	Items.Add(ItemInstance);
+	OutItemInstanceId = ItemInstance.InstanceId;
+	MarkInventoryDirty();
+	return true;
+}
+
+bool UNotoInventoryComponent::ConsumeLoadedAmmo(FGuid ItemInstanceId, int32 Amount)
+{
+	FScopedMutation Mutation(*this);
+	FNotoItemInstance* Item = FindItem(ItemInstanceId);
+	if (!Item || !Item->Definition || !Item->Definition->IsFirearm() || Amount <= 0)
+	{
+		return false;
+	}
+
+	if (Item->LoadedAmmo < Amount)
+	{
+		return false;
+	}
+
+	Item->LoadedAmmo -= Amount;
+	MarkInventoryDirty();
+	return true;
+}
+
+bool UNotoInventoryComponent::ReloadItem(FGuid ItemInstanceId, int32& OutReloadedRounds)
+{
+	OutReloadedRounds = 0;
+	FScopedMutation Mutation(*this);
+	const int32 WeaponIndex = Items.IndexOfByPredicate([ItemInstanceId](const FNotoItemInstance& Item)
+	{
+		return Item.InstanceId == ItemInstanceId;
+	});
+	if (WeaponIndex == INDEX_NONE || !Items[WeaponIndex].Definition || !Items[WeaponIndex].Definition->IsFirearm())
+	{
+		return false;
+	}
+
+	const UNotoItemDefinition& WeaponDefinition = *Items[WeaponIndex].Definition;
+	UNotoItemDefinition* AmmunitionDefinition = WeaponDefinition.GetAmmunitionDefinition();
+	if (!WeaponDefinition.UsesAmmunition() || !AmmunitionDefinition || !AmmunitionDefinition->IsAmmunition()
+		|| AmmunitionDefinition->GetMaxStackSize() <= 1)
+	{
+		return false;
+	}
+
+	const int32 MissingRounds = WeaponDefinition.GetAmmoCapacity() - Items[WeaponIndex].LoadedAmmo;
+	if (MissingRounds <= 0)
+	{
+		return false;
+	}
+
+	const int32 MaximumReload = WeaponDefinition.GetAmmoFeedType() == ENotoAmmoFeedType::Internal
+		                            ? 1
+		                            : MissingRounds;
+	int32 RemainingToLoad = FMath::Min(MissingRounds, MaximumReload);
+	for (int32 Index = Items.Num() - 1; Index >= 0 && RemainingToLoad > 0; --Index)
+	{
+		FNotoItemInstance& Candidate = Items[Index];
+		if (Candidate.Definition != AmmunitionDefinition || Candidate.Quantity <= 0)
+		{
+			continue;
+		}
+
+		const int32 ConsumedRounds = FMath::Min(Candidate.Quantity, RemainingToLoad);
+		Candidate.Quantity -= ConsumedRounds;
+		RemainingToLoad -= ConsumedRounds;
+		if (Candidate.Quantity == 0)
+		{
+			Items.RemoveAtSwap(Index, EAllowShrinking::No);
+		}
+	}
+
+	OutReloadedRounds = FMath::Min(MissingRounds, MaximumReload) - RemainingToLoad;
+	if (OutReloadedRounds <= 0)
+	{
+		return false;
+	}
+	FNotoItemInstance* Weapon = FindItem(ItemInstanceId);
+	check(Weapon);
+	Weapon->LoadedAmmo += OutReloadedRounds;
+	MarkInventoryDirty();
 	return true;
 }
 
@@ -558,39 +647,43 @@ bool UNotoInventoryComponent::ResolveItemDefinitions()
 	bool bAllResolved = true;
 	bool bAnyDefinitionChanged = false;
 
+	auto ResolveDefinition = [&AssetManager](FPrimaryAssetId DefinitionId)
+	{
+		UNotoItemDefinition* Definition = Cast<UNotoItemDefinition>(AssetManager.GetPrimaryAssetObject(DefinitionId));
+		if (!Definition)
+		{
+			Definition = Cast<UNotoItemDefinition>(AssetManager.GetPrimaryAssetPath(DefinitionId).TryLoad());
+		}
+		return Definition && Definition->GetPrimaryAssetId() == DefinitionId ? Definition : nullptr;
+	};
+
 	for (FNotoItemInstance& Item : Items)
 	{
-		if (Item.Definition && Item.Definition->GetPrimaryAssetId() == Item.DefinitionId)
+		if (!Item.Definition || Item.Definition->GetPrimaryAssetId() != Item.DefinitionId)
 		{
-			continue;
-		}
-
-		UNotoItemDefinition* ResolvedDefinition = Cast<UNotoItemDefinition>(
-			AssetManager.GetPrimaryAssetObject(Item.DefinitionId));
-		if (!ResolvedDefinition)
-		{
-			const FSoftObjectPath DefinitionPath = AssetManager.GetPrimaryAssetPath(Item.DefinitionId);
-			ResolvedDefinition = Cast<UNotoItemDefinition>(DefinitionPath.TryLoad());
-		}
-
-		if (!ResolvedDefinition || ResolvedDefinition->GetPrimaryAssetId() != Item.DefinitionId)
-		{
-			bAllResolved = false;
-			if (Item.Definition)
+			Item.Definition = ResolveDefinition(Item.DefinitionId);
+			bAnyDefinitionChanged = true;
+			if (!Item.Definition)
 			{
-				Item.Definition = nullptr;
-				bAnyDefinitionChanged = true;
+				bAllResolved = false;
+				continue;
 			}
-			continue;
 		}
 
-		Item.Definition = ResolvedDefinition;
-		bAnyDefinitionChanged = true;
+		const int32 NormalizedAmmo = Item.Definition->UsesAmmunition()
+			                             ? FMath::Clamp(Item.LoadedAmmo, 0, Item.Definition->GetAmmoCapacity())
+			                             : 0;
+		if (NormalizedAmmo != Item.LoadedAmmo)
+		{
+			Item.LoadedAmmo = NormalizedAmmo;
+			bAnyDefinitionChanged = true;
+		}
 	}
 
 	if (bAnyDefinitionChanged)
 	{
 		MarkInventoryDirty();
+		MarkEquipmentDirty();
 	}
 	return bAllResolved;
 }
@@ -600,6 +693,14 @@ bool UNotoInventoryComponent::IsEquipmentItem(const UNotoItemDefinition& Definit
 	return Definition.GetItemType() == ENotoItemType::MainWeapon
 		|| Definition.GetItemType() == ENotoItemType::SecondaryWeapon
 		|| Definition.GetItemType() == ENotoItemType::Tool;
+}
+
+bool UNotoInventoryComponent::IsInstanceIdInUse(FGuid InstanceId) const
+{
+	return InstanceId.IsValid() && Items.ContainsByPredicate([InstanceId](const FNotoItemInstance& Item)
+	{
+		return Item.InstanceId == InstanceId;
+	});
 }
 
 FNotoItemInstance* UNotoInventoryComponent::FindItem(FGuid ItemInstanceId)
