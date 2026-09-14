@@ -5,8 +5,6 @@
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
 #include "Character/NotoEquippedItemActor.h"
-#include "Character/NotoCharacter.h"
-#include "Components/SkeletalMeshComponent.h"
 #include "Development/NotoGameplayTags.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -61,17 +59,7 @@ bool UNotoEquippedItemComponent::PlayAction(FGameplayTag ActionTag)
 	bool bPlayed = false;
 	if (Animation->CharacterMontage)
 	{
-		if (const ANotoCharacter* NotoCharacter = Cast<ANotoCharacter>(GetOwner()))
-		{
-			if (USkeletalMeshComponent* PresentationMesh = NotoCharacter->GetPresentationMesh())
-			{
-				if (UAnimInstance* AnimInstance = PresentationMesh->GetAnimInstance())
-				{
-					bPlayed |= AnimInstance->Montage_Play(Animation->CharacterMontage) > 0.0f;
-				}
-			}
-		}
-		else if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
+		if (ACharacter* Character = Cast<ACharacter>(GetOwner()))
 		{
 			bPlayed |= Character->PlayAnimMontage(Animation->CharacterMontage) > 0.0f;
 		}
@@ -130,10 +118,6 @@ void UNotoEquippedItemComponent::RefreshEquippedItem()
 	DisplayedActor->FinishSpawning(FTransform::Identity, true);
 	DisplayedActor->SetActorRelativeTransform(DisplayedDefinition->GetEquippedRelativeTransform());
 	USkeletalMeshComponent* AttachmentMesh = Character->GetMesh();
-	if (ANotoCharacter* NotoCharacter = Cast<ANotoCharacter>(Character))
-	{
-		AttachmentMesh = NotoCharacter->GetPresentationMesh();
-	}
 	if (!AttachmentMesh)
 	{
 		ClearEquippedItem();

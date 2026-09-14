@@ -93,8 +93,7 @@ bool FNotoEquippedItemActiveItemTest::RunTest(const FString& Parameters)
 	UNotoInventoryComponent* Inventory = TestWorld.PlayerState->GetInventoryComponent();
 	UNotoEquippedItemComponent* Presentation = TestWorld.Character->GetEquippedItemComponent();
 	TestNotNull(TEXT("Character has a motion warping component"), TestWorld.Character->GetMotionWarpingComponent());
-	TestNotNull(TEXT("Character has a presentation mesh component"), TestWorld.Character->GetPresentationMesh());
-	TestEqual(TEXT("Unconfigured presentation falls back to the primary mesh"), TestWorld.Character->GetPresentationMesh(), TestWorld.Character->GetMesh());
+	TestNotNull(TEXT("Character has a primary mesh component"), TestWorld.Character->GetMesh());
 	UNotoItemDefinition* Weapon = MakeItem(TEXT("PresentedWeapon"), ENotoItemType::MainWeapon);
 	UNotoItemDefinition* Tool = MakeItem(TEXT("PresentedTool"), ENotoItemType::Tool);
 

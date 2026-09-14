@@ -196,7 +196,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
 		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides))
-	FName EquippedSocketName = TEXT("HandGrip_R");
+	FName EquippedSocketName = TEXT("weapon_r");
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
 		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides))

@@ -30,11 +30,6 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 		MeshComponent->SetCollisionProfileName(TEXT("PawnMesh"));
 	}
 
-	PresentationMesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("PresentationMesh"));
-	PresentationMesh->SetupAttachment(GetMesh());
-	PresentationMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	PresentationMesh->SetGenerateOverlapEvents(false);
-	PresentationMesh->SetCanEverAffectNavigation(false);
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
 
 	GameplayCameraComponent = CreateDefaultSubobject<UGameplayCameraComponent>(TEXT("CameraComponent"));
@@ -53,11 +48,6 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 
 	BaseEyeHeight = 80.0f;
 	CrouchedEyeHeight = 50.0f;
-}
-
-USkeletalMeshComponent* ANotoCharacter::GetPresentationMesh() const
-{
-	return PresentationMesh && PresentationMesh->GetSkeletalMeshAsset() ? PresentationMesh.Get() : GetMesh();
 }
 
 UAbilitySystemComponent* ANotoCharacter::GetAbilitySystemComponent() const
