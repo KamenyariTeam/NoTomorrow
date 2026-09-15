@@ -4,6 +4,8 @@
 
 #include "Animation/AnimMontage.h"
 #include "Animation/AnimInstance.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
 #include "Character/NotoEquippedItemActor.h"
 #include "Development/NotoGameplayTags.h"
 #include "Engine/World.h"
@@ -49,6 +51,11 @@ bool UNotoEquippedItemComponent::PlayAction(FGameplayTag ActionTag)
 	{
 		return false;
 	}
+	if (const UAbilitySystemComponent* AbilitySystem = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+		AbilitySystem && AbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Traversing))
+	{
+		return false;
+	}
 
 	const FNotoEquippedItemAnimation* Animation = DisplayedDefinition->FindEquippedAnimation(ActionTag);
 	if (!Animation)
@@ -69,6 +76,17 @@ bool UNotoEquippedItemComponent::PlayAction(FGameplayTag ActionTag)
 		bPlayed |= DisplayedActor->PlayItemAction(ActionTag, Animation->ItemMontage);
 	}
 	return bPlayed;
+}
+
+bool UNotoEquippedItemComponent::HasDisplayedItemTag(FGameplayTag ItemTag, bool bExactMatch) const
+{
+	if (!DisplayedDefinition || !ItemTag.IsValid())
+	{
+		return false;
+	}
+
+	const FGameplayTagContainer ItemTags = DisplayedDefinition->GetItemTags();
+	return bExactMatch ? ItemTags.HasTagExact(ItemTag) : ItemTags.HasTag(ItemTag);
 }
 
 void UNotoEquippedItemComponent::OnUnregister()

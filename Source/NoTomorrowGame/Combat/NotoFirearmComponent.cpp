@@ -42,7 +42,8 @@ bool UNotoFirearmComponent::TryFire()
 	UAbilitySystemComponent* SourceAbilitySystem = GetAbilitySystem();
 	UWorld* World = GetWorld();
 	if (!Pawn || !Inventory || !SourceAbilitySystem || !World
-		|| SourceAbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Dead))
+		|| SourceAbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Dead)
+		|| SourceAbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Traversing))
 	{
 		return false;
 	}
@@ -55,12 +56,19 @@ bool UNotoFirearmComponent::TryFire()
 
 	const double CurrentTime = World->GetTimeSeconds();
 	const double* NextAllowedFireTime = NextAllowedFireTimes.Find(Weapon.InstanceId);
-	if ((NextAllowedFireTime && CurrentTime < *NextAllowedFireTime)
-		|| !Inventory->ConsumeLoadedAmmo(Weapon.InstanceId, Weapon.Definition->GetAmmoPerShot()))
+	if (NextAllowedFireTime && CurrentTime < *NextAllowedFireTime)
 	{
 		return false;
 	}
 	NextAllowedFireTimes.FindOrAdd(Weapon.InstanceId) = CurrentTime + Weapon.Definition->GetFireInterval();
+	if (!Inventory->ConsumeLoadedAmmo(Weapon.InstanceId, Weapon.Definition->GetAmmoPerShot()))
+	{
+		if (UNotoEquippedItemComponent* EquippedItem = Pawn->FindComponentByClass<UNotoEquippedItemComponent>())
+		{
+			EquippedItem->PlayAction(NotoGameplayTags::ItemAction_DryFire);
+		}
+		return false;
+	}
 
 	const FVector TraceStart = Pawn->GetActorLocation()
 		+ FVector::UpVector * Weapon.Definition->GetFirearmTraceHeight();
@@ -110,6 +118,12 @@ bool UNotoFirearmComponent::TryFire()
 
 bool UNotoFirearmComponent::TryReload()
 {
+	if (const UAbilitySystemComponent* AbilitySystem = GetAbilitySystem();
+		AbilitySystem && AbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Traversing))
+	{
+		return false;
+	}
+
 	UNotoInventoryComponent* Inventory = GetInventory();
 	FNotoItemInstance Weapon;
 	int32 ReloadedRounds = 0;

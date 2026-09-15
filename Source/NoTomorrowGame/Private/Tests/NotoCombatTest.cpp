@@ -241,6 +241,15 @@ bool FNotoFirearmPerItemCooldownTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Secondary weapon equips"),
 	         Inventory->EquipItem(SecondaryWeaponId, ENotoEquipmentSlot::SecondaryWeapon, false));
 	TestTrue(TEXT("Main weapon becomes active"), Inventory->SetActiveSlot(ENotoEquipmentSlot::MainWeapon));
+	PlayerState->GetAbilitySystemComponent()->SetLooseGameplayTagCount(
+		NotoGameplayTags::State_Traversing,
+		1,
+		EGameplayTagReplicationState::None);
+	TestFalse(TEXT("Traversal blocks firearm actions"), Firearm->TryFire());
+	PlayerState->GetAbilitySystemComponent()->SetLooseGameplayTagCount(
+		NotoGameplayTags::State_Traversing,
+		0,
+		EGameplayTagReplicationState::None);
 	TestTrue(TEXT("Main weapon fires"), Firearm->TryFire());
 
 	TestTrue(TEXT("Secondary weapon becomes active"), Inventory->SetActiveSlot(ENotoEquipmentSlot::SecondaryWeapon));

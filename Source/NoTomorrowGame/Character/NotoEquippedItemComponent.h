@@ -32,6 +32,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Noto|Equipment")
 	ANotoEquippedItemActor* GetDisplayedActor() const { return DisplayedActor; }
 
+	UFUNCTION(BlueprintPure, Category = "Noto|Equipment")
+	UNotoItemDefinition* GetDisplayedItemDefinition() const { return DisplayedDefinition; }
+
+	/** Tests the active item's authored tags without coupling animation code to its presentation actor. */
+	UFUNCTION(BlueprintPure, Category = "Noto|Equipment", Meta = (Categories = "Item"))
+	bool HasDisplayedItemTag(FGameplayTag ItemTag, bool bExactMatch = false) const;
+
 	virtual void OnUnregister() override;
 
 private:
