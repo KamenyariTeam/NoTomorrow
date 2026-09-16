@@ -89,6 +89,11 @@ bool UNotoEquippedItemComponent::HasDisplayedItemTag(FGameplayTag ItemTag, bool 
 	return bExactMatch ? ItemTags.HasTagExact(ItemTag) : ItemTags.HasTag(ItemTag);
 }
 
+UNotoHeldItemAnimationProfile* UNotoEquippedItemComponent::GetDisplayedHeldItemAnimationProfile() const
+{
+	return DisplayedDefinition ? DisplayedDefinition->GetHeldItemAnimationProfile() : nullptr;
+}
+
 void UNotoEquippedItemComponent::OnUnregister()
 {
 	UninitializeFromInventory();

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Components/PawnComponent.h"
+#include "Animation/NotoHeldItemAnimationTypes.h"
 #include "GameplayTagContainer.h"
 #include "TimerManager.h"
 #include "NotoPlayerPawnComponent.generated.h"
@@ -50,6 +51,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Noto|Movement")
 	FGameplayTag GetMovementState() const { return MovementState; }
 
+	/** Local presentation intent consumed by the character AnimInstance. It does not grant gameplay state. */
+	UFUNCTION(BlueprintCallable, Category = "Noto|Animation|Held Item")
+	void SetHeldItemPoseMode(ENotoHeldItemPoseMode NewPoseMode) { HeldItemPoseMode = NewPoseMode; }
+
+	UFUNCTION(BlueprintPure, Category = "Noto|Animation|Held Item")
+	ENotoHeldItemPoseMode GetHeldItemPoseMode() const { return HeldItemPoseMode; }
+
 	/** Lets a future user-settings system reverse the interaction modifier at runtime. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Input")
 	void SetPickupActiveSlotModifierReversed(bool bReversed) { bPickupActiveSlotModifierReversed = bReversed; }
@@ -89,6 +97,9 @@ protected:
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Noto|Movement")
 	FGameplayTag MovementState;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Noto|Animation|Held Item")
+	ENotoHeldItemPoseMode HeldItemPoseMode = ENotoHeldItemPoseMode::HipFire;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Movement|Noise", Meta = (ClampMin = "0.0", Units = "s"))
 	float MovementNoiseInterval = 0.25f;

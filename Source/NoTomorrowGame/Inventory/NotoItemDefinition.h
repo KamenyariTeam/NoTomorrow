@@ -11,6 +11,7 @@
 class UStaticMesh;
 class UAnimMontage;
 class UNotoItemDefinition;
+class UNotoHeldItemAnimationProfile;
 
 /** Presentation montages selected by an item action tag such as equip, fire, reload, or tool use. */
 USTRUCT(BlueprintType)
@@ -116,6 +117,7 @@ public:
 	TSubclassOf<ANotoEquippedItemActor> GetEquippedActorClass() const { return EquippedActorClass; }
 	FName GetEquippedSocketName() const { return EquippedSocketName; }
 	FTransform GetEquippedRelativeTransform() const { return EquippedRelativeTransform; }
+	UNotoHeldItemAnimationProfile* GetHeldItemAnimationProfile() const { return HeldItemAnimationProfile; }
 	const FNotoEquippedItemAnimation* FindEquippedAnimation(FGameplayTag ActionTag) const;
 
 #if WITH_EDITOR
@@ -201,6 +203,10 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
 		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides))
 	FTransform EquippedRelativeTransform = FTransform::Identity;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation|Animation",
+		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides))
+	TObjectPtr<UNotoHeldItemAnimationProfile> HeldItemAnimationProfile;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipped Presentation",
 		Meta = (AllowPrivateAccess = "true", EditCondition = "EquippedActorClass != nullptr", EditConditionHides, TitleProperty = "ActionTag"))

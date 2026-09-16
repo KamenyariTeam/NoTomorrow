@@ -9,6 +9,7 @@
 class ANotoEquippedItemActor;
 class UNotoInventoryComponent;
 class UNotoItemDefinition;
+class UNotoHeldItemAnimationProfile;
 
 /** No-tick visual and animation presentation for the item currently selected in the player's hands. */
 UCLASS(BlueprintType, ClassGroup = (Noto), Meta = (BlueprintSpawnableComponent))
@@ -34,6 +35,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Equipment")
 	UNotoItemDefinition* GetDisplayedItemDefinition() const { return DisplayedDefinition; }
+
+	UFUNCTION(BlueprintPure, Category = "Noto|Equipment|Animation")
+	UNotoHeldItemAnimationProfile* GetDisplayedHeldItemAnimationProfile() const;
 
 	/** Tests the active item's authored tags without coupling animation code to its presentation actor. */
 	UFUNCTION(BlueprintPure, Category = "Noto|Equipment", Meta = (Categories = "Item"))
