@@ -13,6 +13,8 @@ class UNotoEquippedItemComponent;
 class UNotoHealthComponent;
 class UNotoInteractionComponent;
 class UNotoPlayerPawnComponent;
+class UNotoRagdollComponent;
+class UNotoTraversalComponent;
 class UMotionWarpingComponent;
 
 /** Player avatar used by No Tomorrow. */
@@ -46,6 +48,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Noto|Traversal")
 	UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpingComponent; }
 
+	UFUNCTION(BlueprintPure, Category = "Noto|Traversal")
+	UNotoTraversalComponent* GetTraversalComponent() const { return TraversalComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Noto|Ragdoll")
+	UNotoRagdollComponent* GetRagdollComponent() const { return RagdollComponent; }
+
+	UFUNCTION(BlueprintPure, Category = "Noto|Character")
+	UNotoPlayerPawnComponent* GetPlayerPawnComponent() const { return PlayerPawnComponent; }
+
 protected:
 	void InitializeAbilitySystem();
 	void UninitializeAbilitySystem();
@@ -55,6 +66,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Traversal", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UMotionWarpingComponent> MotionWarpingComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Traversal", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoTraversalComponent> TraversalComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Ragdoll", Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UNotoRagdollComponent> RagdollComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Noto|Interaction", Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UNotoInteractionComponent> InteractionComponent;

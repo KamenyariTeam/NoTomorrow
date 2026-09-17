@@ -13,6 +13,8 @@
 #include "Interaction/NotoInteractionComponent.h"
 #include "MotionWarpingComponent.h"
 #include "Player/NotoPlayerState.h"
+#include "Traversal/NotoTraversalComponent.h"
+#include "Ragdoll/NotoRagdollComponent.h"
 
 ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer)
@@ -31,6 +33,8 @@ ANotoCharacter::ANotoCharacter(const FObjectInitializer& ObjectInitializer)
 	}
 
 	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComponent"));
+	TraversalComponent = CreateDefaultSubobject<UNotoTraversalComponent>(TEXT("TraversalComponent"));
+	RagdollComponent = CreateDefaultSubobject<UNotoRagdollComponent>(TEXT("RagdollComponent"));
 
 	GameplayCameraComponent = CreateDefaultSubobject<UGameplayCameraComponent>(TEXT("CameraComponent"));
 	GameplayCameraComponent->SetupAttachment(RootComponent);

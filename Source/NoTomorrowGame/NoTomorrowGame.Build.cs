@@ -22,7 +22,9 @@ public class NoTomorrowGame : ModuleRules
 			"GameplayTags",
 			"GameplayTasks",
 			"AIModule",
-			"MotionWarping"
+			"MotionWarping",
+			"AnimationWarpingRuntime",
+			"PoseSearch"
 		]);
 
 		PrivateDependencyModuleNames.AddRange(["CommonInput", "GameplayCameras", "UMG"]);

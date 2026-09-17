@@ -32,5 +32,6 @@ namespace NotoGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Damage, "Data.Damage", "Set-by-caller damage magnitude.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dead, "State.Dead", "Actor health has reached zero.");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Ragdoll, "State.Ragdoll", "Actor is simulated by the ragdoll component.");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Traversing, "State.Traversing", "Actor is performing a traversal action.");
 }

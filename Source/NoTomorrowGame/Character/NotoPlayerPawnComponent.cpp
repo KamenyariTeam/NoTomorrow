@@ -271,6 +271,19 @@ void UNotoPlayerPawnComponent::SetMovementState(FGameplayTag NewStateTag)
 	ApplyMovementState();
 }
 
+FNotoPlayerInputState UNotoPlayerPawnComponent::GetLocomotionInputState() const
+{
+	FNotoPlayerInputState InputState;
+	InputState.bWantsToWalk = MovementState == NotoGameplayTags::MovementState_Sneak;
+	InputState.bWantsToStrafe = true;
+	InputState.bWantsToAim = true;
+	if (const ACharacter* Character = GetPawn<ACharacter>())
+	{
+		InputState.bWantsToCrouch = Character->bIsCrouched;
+	}
+	return InputState;
+}
+
 void UNotoPlayerPawnComponent::UpdateAimFromMouseCursor()
 {
 	APawn* Pawn = GetPawn<APawn>();
@@ -296,6 +309,18 @@ void UNotoPlayerPawnComponent::UpdateAimFromMouseCursor()
 
 bool UNotoPlayerPawnComponent::GetMouseAimDirection(const APlayerController& PlayerController, const APawn& Pawn, FVector& OutAimDirection) const
 {
+	if (const ANotoPlayerController* NotoPlayerController = Cast<ANotoPlayerController>(&PlayerController))
+	{
+		FVector CursorGroundLocation;
+		if (!NotoPlayerController->TryDeprojectMouseToGround(Pawn.GetActorLocation().Z, CursorGroundLocation))
+		{
+			return false;
+		}
+
+		OutAimDirection = (CursorGroundLocation - Pawn.GetActorLocation()).GetSafeNormal2D();
+		return !OutAimDirection.IsNearlyZero();
+	}
+
 	FVector RayOrigin;
 	FVector RayDirection;
 	if (!PlayerController.DeprojectMousePositionToWorld(RayOrigin, RayDirection))

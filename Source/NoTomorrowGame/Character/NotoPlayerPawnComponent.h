@@ -4,6 +4,7 @@
 
 #include "Components/PawnComponent.h"
 #include "Animation/NotoHeldItemAnimationTypes.h"
+#include "Animation/NotoLocomotionTypes.h"
 #include "GameplayTagContainer.h"
 #include "TimerManager.h"
 #include "NotoPlayerPawnComponent.generated.h"
@@ -50,6 +51,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Movement")
 	FGameplayTag GetMovementState() const { return MovementState; }
+
+	/** Local input intent for animation presentation. It does not grant gameplay state. */
+	UFUNCTION(BlueprintPure, Category = "Noto|Animation|Locomotion")
+	FNotoPlayerInputState GetLocomotionInputState() const;
 
 	/** Local presentation intent consumed by the character AnimInstance. It does not grant gameplay state. */
 	UFUNCTION(BlueprintCallable, Category = "Noto|Animation|Held Item")

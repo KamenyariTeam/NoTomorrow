@@ -122,6 +122,19 @@ bool ANotoPlayerController::IsUsingGamepad() const
 	return InputSubsystem && InputSubsystem->GetCurrentInputType() == ECommonInputType::Gamepad;
 }
 
+bool ANotoPlayerController::TryDeprojectMouseToGround(const float GroundZ, FVector& OutWorldLocation) const
+{
+	FVector RayOrigin;
+	FVector RayDirection;
+	if (!DeprojectMousePositionToWorld(RayOrigin, RayDirection) || FMath::Abs(RayDirection.Z) <= KINDA_SMALL_NUMBER)
+	{
+		return false;
+	}
+
+	OutWorldLocation = RayOrigin + RayDirection * ((GroundZ - RayOrigin.Z) / RayDirection.Z);
+	return true;
+}
+
 void ANotoPlayerController::InitPlayerState()
 {
 	Super::InitPlayerState();

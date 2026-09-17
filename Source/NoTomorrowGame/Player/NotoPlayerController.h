@@ -34,6 +34,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Noto|Input")
 	bool IsUsingGamepad() const;
 
+	/** Converts the current mouse cursor to world space on a horizontal plane. */
+	UFUNCTION(BlueprintPure, Category = "Noto|Input")
+	bool TryDeprojectMouseToGround(float GroundZ, FVector& OutWorldLocation) const;
+
 	/** Convenience access for input and presentation; runtime inventory remains owned by PlayerState. */
 	UFUNCTION(BlueprintPure, Category = "Noto|Inventory")
 	UNotoInventoryComponent* GetInventoryComponent() const;
