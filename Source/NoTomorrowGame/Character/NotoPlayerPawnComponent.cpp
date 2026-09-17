@@ -2,6 +2,8 @@
 
 #include "NotoPlayerPawnComponent.h"
 
+#include "AbilitySystemComponent.h"
+#include "Character/NotoCharacter.h"
 #include "Perception/AISense_Hearing.h"
 #include "Combat/NotoFirearmComponent.h"
 #include "Development/NotoGameplayTags.h"
@@ -14,6 +16,8 @@
 #include "Interaction/NotoInteractionComponent.h"
 #include "Player/NotoPlayerController.h"
 #include "Player/NotoPlayerState.h"
+#include "Ragdoll/NotoRagdollComponent.h"
+#include "Traversal/NotoTraversalComponent.h"
 #include "Engine/World.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(NotoPlayerPawnComponent)
@@ -24,11 +28,11 @@ UNotoPlayerPawnComponent::UNotoPlayerPawnComponent(const FObjectInitializer& Obj
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.bStartWithTickEnabled = false;
 
-	MovementStates = {
-		{NotoGameplayTags::MovementState_Run, 600.0f, 300.0f, NotoGameplayTags::NoiseTag_Movement},
-		{NotoGameplayTags::MovementState_Sneak, 300.0f, 0.0f, NotoGameplayTags::NoiseTag_Movement}
+	GaitConfigs = {
+		{ENotoLocomotionGait::Walk, 300.0f, 0.0f, NotoGameplayTags::NoiseTag_Movement},
+		{ENotoLocomotionGait::Run, 600.0f, 300.0f, NotoGameplayTags::NoiseTag_Movement},
+		{ENotoLocomotionGait::Sprint, 800.0f, 450.0f, NotoGameplayTags::NoiseTag_Movement}
 	};
-	MovementState = NotoGameplayTags::MovementState_Run;
 }
 
 void UNotoPlayerPawnComponent::BeginPlay()
@@ -42,7 +46,8 @@ void UNotoPlayerPawnComponent::BeginPlay()
 
 	RefreshAimTickEnabled();
 	RefreshMovementNoiseTimer();
-	ApplyMovementState();
+	ResolveLocomotionState();
+	ApplyLocomotionState();
 }
 
 void UNotoPlayerPawnComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -83,12 +88,14 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 		ETriggerEvent::Triggered,
 		this,
 		&ThisClass::Input_Aim);
-	NotoInputComponent->BindNativeAction(
-		DefaultInputConfig,
-		NotoGameplayTags::InputTag_Sneak,
-		ETriggerEvent::Started,
-		this,
-		&ThisClass::Input_ToggleSneak);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Jump, ETriggerEvent::Started, this, &ThisClass::Input_Jump);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Jump, ETriggerEvent::Completed, this, &ThisClass::Input_StopJumping);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Jump, ETriggerEvent::Canceled, this, &ThisClass::Input_StopJumping);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Crouch, ETriggerEvent::Started, this, &ThisClass::Input_ToggleCrouch);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Sprint, ETriggerEvent::Started, this, &ThisClass::Input_StartSprint);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Sprint, ETriggerEvent::Completed, this, &ThisClass::Input_StopSprint);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Sprint, ETriggerEvent::Canceled, this, &ThisClass::Input_StopSprint);
+	NotoInputComponent->BindNativeAction(DefaultInputConfig, NotoGameplayTags::InputTag_Walk, ETriggerEvent::Started, this, &ThisClass::Input_ToggleWalk);
 	NotoInputComponent->BindNativeAction(
 		DefaultInputConfig,
 		NotoGameplayTags::InputTag_Interact,
@@ -126,6 +133,7 @@ void UNotoPlayerPawnComponent::InitializePlayerInput(UInputComponent* PlayerInpu
 void UNotoPlayerPawnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+	ResolveLocomotionState();
 	UpdateAimFromMouseCursor();
 }
 
@@ -156,6 +164,11 @@ void UNotoPlayerPawnComponent::RefreshMovementNoiseTimer()
 
 void UNotoPlayerPawnComponent::Input_Move(const FInputActionValue& InputActionValue)
 {
+	if (!CanAcceptMovementInput())
+	{
+		return;
+	}
+
 	APawn* Pawn = GetPawn<APawn>();
 	const AController* Controller = Pawn ? Pawn->GetController() : nullptr;
 	if (!Controller)
@@ -189,7 +202,10 @@ void UNotoPlayerPawnComponent::Input_Aim(const FInputActionValue& InputActionVal
 	const FVector2D Value = InputActionValue.Get<FVector2D>();
 	const FRotator AimRotation(0.0f, PlayerController->GetControlRotation().Yaw, 0.0f);
 	const FVector AimDirection = AimRotation.RotateVector(FVector(Value.Y, Value.X, 0.0f)).GetSafeNormal2D();
-	Pawn->SetActorRotation(AimDirection.Rotation());
+	if (CanUseAimFacing())
+	{
+		Pawn->SetActorRotation(AimDirection.Rotation());
+	}
 
 	FVector2D CrosshairPosition;
 	if (PlayerController->ProjectWorldLocationToScreen(Pawn->GetActorLocation() + AimDirection * GamepadAimRadius, CrosshairPosition, true))
@@ -198,9 +214,62 @@ void UNotoPlayerPawnComponent::Input_Aim(const FInputActionValue& InputActionVal
 	}
 }
 
-void UNotoPlayerPawnComponent::Input_ToggleSneak()
+void UNotoPlayerPawnComponent::Input_Jump()
 {
-	SetMovementState(MovementState == NotoGameplayTags::MovementState_Sneak ? NotoGameplayTags::MovementState_Run : NotoGameplayTags::MovementState_Sneak);
+	if (!HasLocomotionBlocker())
+	{
+		if (ACharacter* Character = GetPawn<ACharacter>())
+		{
+			Character->Jump();
+		}
+	}
+}
+
+void UNotoPlayerPawnComponent::Input_StopJumping()
+{
+	if (ACharacter* Character = GetPawn<ACharacter>())
+	{
+		Character->StopJumping();
+	}
+}
+
+void UNotoPlayerPawnComponent::Input_ToggleCrouch()
+{
+	if (HasLocomotionBlocker())
+	{
+		return;
+	}
+
+	if (ACharacter* Character = GetPawn<ACharacter>())
+	{
+		if (UCharacterMovementComponent* Movement = Character->GetCharacterMovement(); Movement && (Character->bIsCrouched || Movement->bWantsToCrouch))
+		{
+			Character->UnCrouch();
+		}
+		else
+		{
+			Character->Crouch();
+		}
+	}
+	ResolveLocomotionState();
+}
+
+void UNotoPlayerPawnComponent::Input_StartSprint()
+{
+	bSprintRequested = true;
+	ResolveLocomotionState();
+}
+
+void UNotoPlayerPawnComponent::Input_StopSprint()
+{
+	bSprintRequested = false;
+	ResolveLocomotionState();
+}
+
+void UNotoPlayerPawnComponent::Input_ToggleWalk()
+{
+	bWalkRequested = !bWalkRequested;
+	ResolveLocomotionState();
 }
 
 void UNotoPlayerPawnComponent::Input_Interact()
@@ -260,26 +329,16 @@ void UNotoPlayerPawnComponent::Input_Drop()
 	}
 }
 
-void UNotoPlayerPawnComponent::SetMovementState(FGameplayTag NewStateTag)
-{
-	if (MovementState == NewStateTag || !FindMovementStateConfig(NewStateTag))
-	{
-		return;
-	}
-
-	MovementState = NewStateTag;
-	ApplyMovementState();
-}
-
 FNotoPlayerInputState UNotoPlayerPawnComponent::GetLocomotionInputState() const
 {
 	FNotoPlayerInputState InputState;
-	InputState.bWantsToWalk = MovementState == NotoGameplayTags::MovementState_Sneak;
-	InputState.bWantsToStrafe = true;
-	InputState.bWantsToAim = true;
+	InputState.bWantsToSprint = bSprintRequested;
+	InputState.bWantsToWalk = bWalkRequested;
+	InputState.bWantsToStrafe = ResolvedRotationMode == ENotoLocomotionRotationMode::Strafe;
+	InputState.bWantsToAim = InputState.bWantsToStrafe;
 	if (const ACharacter* Character = GetPawn<ACharacter>())
 	{
-		InputState.bWantsToCrouch = Character->bIsCrouched;
+		InputState.bWantsToCrouch = Character->bIsCrouched || Character->GetCharacterMovement()->bWantsToCrouch;
 	}
 	return InputState;
 }
@@ -294,7 +353,7 @@ void UNotoPlayerPawnComponent::UpdateAimFromMouseCursor()
 	}
 
 	FVector AimDirection;
-	if (GetMouseAimDirection(*PlayerController, *Pawn, AimDirection))
+	if (CanUseAimFacing() && GetMouseAimDirection(*PlayerController, *Pawn, AimDirection))
 	{
 		Pawn->SetActorRotation(AimDirection.Rotation());
 	}
@@ -339,29 +398,109 @@ bool UNotoPlayerPawnComponent::GetMouseAimDirection(const APlayerController& Pla
 	return !OutAimDirection.IsNearlyZero();
 }
 
-const FNotoMovementStateConfig* UNotoPlayerPawnComponent::FindMovementStateConfig(FGameplayTag StateTag) const
+const FNotoGaitConfig* UNotoPlayerPawnComponent::FindGaitConfig(const ENotoLocomotionGait Gait) const
 {
-	return MovementStates.FindByPredicate([StateTag](const FNotoMovementStateConfig& Config)
+	return GaitConfigs.FindByPredicate([Gait](const FNotoGaitConfig& Config)
 	{
-		return Config.StateTag == StateTag;
+		return Config.Gait == Gait;
 	});
 }
 
-void UNotoPlayerPawnComponent::ApplyMovementState()
+void UNotoPlayerPawnComponent::ResolveLocomotionState()
 {
-	const FNotoMovementStateConfig* Config = FindMovementStateConfig(MovementState);
 	ACharacter* Character = GetPawn<ACharacter>();
-	if (Config && Character)
+	UCharacterMovementComponent* Movement = Character ? Character->GetCharacterMovement() : nullptr;
+	if (!Character || !Movement)
 	{
-		Character->GetCharacterMovement()->MaxWalkSpeed = Config->MaxWalkSpeed;
+		return;
 	}
+
+	ENotoLocomotionGait NewGait = bWalkRequested ? ENotoLocomotionGait::Walk : ENotoLocomotionGait::Run;
+	if (Character->bIsCrouched || Movement->bWantsToCrouch)
+	{
+		NewGait = ENotoLocomotionGait::Walk;
+	}
+	else if (IsSprintAllowed())
+	{
+		NewGait = ENotoLocomotionGait::Sprint;
+	}
+
+	const ENotoLocomotionRotationMode NewRotationMode = NewGait == ENotoLocomotionGait::Sprint
+		? ENotoLocomotionRotationMode::OrientToMovement
+		: ENotoLocomotionRotationMode::Strafe;
+	if (ResolvedGait == NewGait && ResolvedRotationMode == NewRotationMode)
+	{
+		return;
+	}
+
+	ResolvedGait = NewGait;
+	ResolvedRotationMode = NewRotationMode;
+	ApplyLocomotionState();
+}
+
+void UNotoPlayerPawnComponent::ApplyLocomotionState()
+{
+	ACharacter* Character = GetPawn<ACharacter>();
+	UCharacterMovementComponent* Movement = Character ? Character->GetCharacterMovement() : nullptr;
+	const FNotoGaitConfig* Config = FindGaitConfig(ResolvedGait);
+	if (!Movement || !Config)
+	{
+		return;
+	}
+
+	Movement->MaxWalkSpeed = Config->MaxWalkSpeed;
+	Movement->bOrientRotationToMovement = ResolvedRotationMode == ENotoLocomotionRotationMode::OrientToMovement;
+}
+
+bool UNotoPlayerPawnComponent::HasLocomotionBlocker() const
+{
+	const ANotoCharacter* Character = GetPawn<ANotoCharacter>();
+	if (!Character)
+	{
+		return true;
+	}
+	if (const UNotoRagdollComponent* RagdollComponent = Character->GetRagdollComponent(); RagdollComponent && RagdollComponent->IsRagdollActive())
+	{
+		return true;
+	}
+	if (const UNotoTraversalComponent* TraversalComponent = Character->GetTraversalComponent(); TraversalComponent && TraversalComponent->IsTraversalActive())
+	{
+		return true;
+	}
+	if (const UAbilitySystemComponent* AbilitySystem = Character->GetAbilitySystemComponent())
+	{
+		return AbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Dead)
+			|| AbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Ragdoll)
+			|| AbilitySystem->HasMatchingGameplayTag(NotoGameplayTags::State_Traversing);
+	}
+	return false;
+}
+
+bool UNotoPlayerPawnComponent::IsSprintAllowed() const
+{
+	const ACharacter* Character = GetPawn<ACharacter>();
+	const UCharacterMovementComponent* Movement = Character ? Character->GetCharacterMovement() : nullptr;
+	return bSprintRequested && Character && Movement && !HasLocomotionBlocker()
+		&& !Character->bIsCrouched && !Movement->bWantsToCrouch
+		&& (Movement->IsMovingOnGround() || Movement->IsFalling());
+}
+
+bool UNotoPlayerPawnComponent::CanAcceptMovementInput() const
+{
+	return !HasLocomotionBlocker();
+}
+
+bool UNotoPlayerPawnComponent::CanUseAimFacing() const
+{
+	return !HasLocomotionBlocker() && ResolvedRotationMode != ENotoLocomotionRotationMode::OrientToMovement;
 }
 
 void UNotoPlayerPawnComponent::ReportMovementNoise()
 {
 	APawn* Pawn = GetPawn<APawn>();
-	const FNotoMovementStateConfig* Config = FindMovementStateConfig(MovementState);
-	if (!Pawn || !Config || Config->NoiseRange <= 0.0f || Pawn->GetVelocity().IsNearlyZero())
+	const FNotoGaitConfig* Config = FindGaitConfig(ResolvedGait);
+	const ACharacter* Character = GetPawn<ACharacter>();
+	if (!Pawn || !Config || (Character && Character->bIsCrouched) || Config->NoiseRange <= 0.0f || Pawn->GetVelocity().IsNearlyZero())
 	{
 		return;
 	}

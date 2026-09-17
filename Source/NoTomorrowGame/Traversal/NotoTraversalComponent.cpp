@@ -7,6 +7,7 @@
 #include "Animation/NotoCharacterAnimInstance.h"
 #include "Animation/AnimInstance.h"
 #include "AnimationWarpingLibrary.h"
+#include "Character/NotoPlayerPawnComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Development/NotoGameplayTags.h"
 #include "Engine/World.h"
@@ -61,6 +62,10 @@ FNotoTraversalMontageChooserInput UNotoTraversalComponent::BuildMontageChooserIn
 		if (const UCharacterMovementComponent* Movement = Character->GetCharacterMovement())
 		{
 			Input.MovementMode = Movement->IsFalling() ? ENotoLocomotionMovementMode::InAir : ENotoLocomotionMovementMode::OnGround;
+		}
+		if (const UNotoPlayerPawnComponent* PlayerPawnComponent = Character->FindComponentByClass<UNotoPlayerPawnComponent>())
+		{
+			Input.Gait = PlayerPawnComponent->GetResolvedGait();
 		}
 	}
 

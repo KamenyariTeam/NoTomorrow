@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameplayTagContainer.h"
 #include "NotoLocomotionTypes.generated.h"
 
 UENUM(BlueprintType)
@@ -89,9 +88,6 @@ struct NOTOMORROWGAME_API FNotoLocomotionAnimSnapshot
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	FNotoPlayerInputState InputState;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
-	FGameplayTag MovementState;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Locomotion")
 	ENotoLocomotionMovementMode MovementMode = ENotoLocomotionMovementMode::OnGround;

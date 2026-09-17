@@ -16,14 +16,14 @@ class UNotoInputConfig;
 class UNotoInteractionComponent;
 struct FInputActionValue;
 
-/** Authored behavior for one movement state. Add states here instead of adding state-specific movement code. */
+/** Authored speed and noise behavior for one locomotion gait. */
 USTRUCT(BlueprintType)
-struct FNotoMovementStateConfig
+struct FNotoGaitConfig
 {
 	GENERATED_BODY()
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "MovementState"))
-	FGameplayTag StateTag;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	ENotoLocomotionGait Gait = ENotoLocomotionGait::Run;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (ClampMin = "0.0", Units = "cm/s"))
 	float MaxWalkSpeed = 600.0f;
@@ -46,11 +46,14 @@ public:
 
 	void InitializePlayerInput(UInputComponent* PlayerInputComponent);
 
-	UFUNCTION(BlueprintCallable, Category = "Noto|Movement")
-	void SetMovementState(FGameplayTag NewStateTag);
+	UFUNCTION(BlueprintPure, Category = "Noto|Movement")
+	ENotoLocomotionGait GetResolvedGait() const { return ResolvedGait; }
 
 	UFUNCTION(BlueprintPure, Category = "Noto|Movement")
-	FGameplayTag GetMovementState() const { return MovementState; }
+	ENotoLocomotionRotationMode GetResolvedRotationMode() const { return ResolvedRotationMode; }
+
+	UFUNCTION(BlueprintPure, Category = "Noto|Movement")
+	bool IsSprintRequested() const { return bSprintRequested; }
 
 	/** Local input intent for animation presentation. It does not grant gameplay state. */
 	UFUNCTION(BlueprintPure, Category = "Noto|Animation|Locomotion")
@@ -79,9 +82,19 @@ protected:
 
 	void RefreshAimTickEnabled();
 	void RefreshMovementNoiseTimer();
+	void ResolveLocomotionState();
+	bool HasLocomotionBlocker() const;
+	bool IsSprintAllowed() const;
+	bool CanAcceptMovementInput() const;
+	bool CanUseAimFacing() const;
 	void Input_Move(const FInputActionValue& InputActionValue);
 	void Input_Aim(const FInputActionValue& InputActionValue);
-	void Input_ToggleSneak();
+	void Input_Jump();
+	void Input_StopJumping();
+	void Input_ToggleCrouch();
+	void Input_StartSprint();
+	void Input_StopSprint();
+	void Input_ToggleWalk();
 	void Input_Interact();
 	void Input_InteractModified();
 	void Input_Fire();
@@ -90,18 +103,27 @@ protected:
 	void TryInteract(bool bModifierHeld);
 	void UpdateAimFromMouseCursor();
 	bool GetMouseAimDirection(const APlayerController& PlayerController, const APawn& Pawn, FVector& OutAimDirection) const;
-	const FNotoMovementStateConfig* FindMovementStateConfig(FGameplayTag StateTag) const;
-	void ApplyMovementState();
+	const FNotoGaitConfig* FindGaitConfig(ENotoLocomotionGait Gait) const;
+	void ApplyLocomotionState();
 	void ReportMovementNoise();
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Input")
 	TObjectPtr<UNotoInputConfig> DefaultInputConfig;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Movement", Meta = (TitleProperty = "StateTag"))
-	TArray<FNotoMovementStateConfig> MovementStates;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Noto|Movement", Meta = (TitleProperty = "Gait"))
+	TArray<FNotoGaitConfig> GaitConfigs;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Noto|Movement")
-	FGameplayTag MovementState;
+	ENotoLocomotionGait ResolvedGait = ENotoLocomotionGait::Run;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Noto|Movement")
+	ENotoLocomotionRotationMode ResolvedRotationMode = ENotoLocomotionRotationMode::Strafe;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Noto|Movement")
+	bool bSprintRequested = false;
+
+	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Noto|Movement")
+	bool bWalkRequested = false;
 
 	UPROPERTY(VisibleInstanceOnly, BlueprintReadOnly, Category = "Noto|Animation|Held Item")
 	ENotoHeldItemPoseMode HeldItemPoseMode = ENotoHeldItemPoseMode::HipFire;

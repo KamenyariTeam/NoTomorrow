@@ -106,10 +106,10 @@ void UNotoCharacterAnimInstance::ResolveLocomotionAnimSnapshot(const float Delta
 	const UNotoPlayerPawnComponent* PlayerPawnComponent = Character->GetPlayerPawnComponent();
 	if (PlayerPawnComponent)
 	{
-		OutSnapshot.MovementState = PlayerPawnComponent->GetMovementState();
 		OutSnapshot.InputState = PlayerPawnComponent->GetLocomotionInputState();
+		OutSnapshot.Gait = PlayerPawnComponent->GetResolvedGait();
+		OutSnapshot.RotationMode = PlayerPawnComponent->GetResolvedRotationMode();
 	}
-	OutSnapshot.Gait = OutSnapshot.InputState.bWantsToWalk ? ENotoLocomotionGait::Walk : ENotoLocomotionGait::Run;
 
 	const UCharacterMovementComponent* MovementComponent = Character->GetCharacterMovement();
 	if (!MovementComponent)
